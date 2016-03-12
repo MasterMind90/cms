@@ -1771,6 +1771,24 @@ class AddUserHandler(SimpleContestHandler("add_user.html")):
         else:
             self.redirect("/add_user/%s" % contest_id)
 
+class SubmissionListViewHandler(BaseHandler):
+    """ Show all submission.
+    WARNING, this may not be the best idea as the submission number can get very large.
+    """
+    def get(self, contest_id):
+        self.contest = self.safe_get_item(Contest, contest_id)
+
+        self.r_params = self.render_params()
+        self.r_params["submissions"] = \
+            self.sql_session.query(Submission)\
+                            .options(joinedload(Submission.task))\
+                            .options(joinedload(Submission.user))\
+                            .options(joinedload(Submission.files))\
+                            .options(joinedload(Submission.token))\
+                            .options(joinedload(Submission.results))\
+                            .order_by(Submission.timestamp.desc()).all()
+        self.render("submission_list.html", **self.r_params)
+
 
 class SubmissionViewHandler(BaseHandler):
     """Shows the details of a submission. All data is already present
@@ -2010,6 +2028,8 @@ _aws_handlers = [
     (r"/add_user/([0-9]+)", AddUserHandler),
     (r"/add_announcement/([0-9]+)", AddAnnouncementHandler),
     (r"/remove_announcement/([0-9]+)", RemoveAnnouncementHandler),
+    (r"/contest/([0-9]+)/submissions/", SubmissionListViewHandler),
+    (r"/submission/([0-9]+)", ContestHandler),
     (r"/submission/([0-9]+)(?:/([0-9]+))?", SubmissionViewHandler),
     (r"/submission_file/([0-9]+)", SubmissionFileHandler),
     (r"/submission_comment/([0-9]+)(?:/([0-9]+))?", SubmissionCommentHandler),

@@ -1,0 +1,218 @@
+{% extends base.html %}
+{% block js %}
+
+function update_submissions_status(response)
+{
+    var table = $("#submissions_status_table > tbody");
+    var msg = utils.standard_response(response);
+    if (msg != "")
+    {
+        table.html('<tr><td style="text-align: center;" colspan="100">'+ msg + '</td></tr>');
+        return;
+    }
+
+    var strings = []
+    strings.push('<tr><td>Scored</td><td>' + response['data']['scored'] + '</td></tr>');
+    if (response['data']['scoring'] != 0)
+        strings.push('<tr><td>Scoring...</td><td>' + response['data']['scoring'] + '</td></tr>');
+    if (response['data']['compilation_fail'] != 0)
+        strings.push('<tr><td>Compilation failed</td><td>' + response['data']['compilation_fail'] + '</td></tr>');
+    if (response['data']['compiling'] != 0)
+        strings.push('<tr><td>Compiling...</td><td>' + response['data']['compiling'] + '</td></tr>');
+    if (response['data']['evaluating'] != 0)
+        strings.push('<tr><td>Evaluating...</td><td>' + response['data']['evaluating'] + '</td></tr>');
+    if (response['data']['max_compilations'] != 0)
+        strings.push('<tr><td>Cannot compile (please check)</td><td>' + response['data']['max_compilations'] + '</td></tr>');
+    if (response['data']['max_evaluations'] != 0)
+        strings.push('<tr><td>Cannot evaluate (please check)</td><td>' + response['data']['max_evaluations'] + '</td></tr>');
+    if (response['data']['invalid'] != 0)
+        strings.push('<tr><td>Invalid (please check)</td><td>' + response['data']['invalid'] + '</td></tr>');
+
+    table.html(strings.join(""));
+};
+
+function link_submissions(s)
+{
+    return s.replace(/submission ([0-9]+)/g,
+                     'submission <a href="{{ url_root }}/submission/$1">\$1</a>');
+}
+
+function update_statuses()
+{
+
+    {% if contest is not None %}
+    if (!update_statuses.submissions_request
+            || update_statuses.submissions_request.state() != "pending") {
+        update_statuses.submissions_request =
+            cmsrpc_request("{{ url_root }}",
+                           "EvaluationService", 0,
+                           "submissions_status",
+                           {},
+                           update_submissions_status);
+    }
+    {% end %}
+}
+
+{% end %}
+
+{% block js_init %}
+
+setInterval(update_statuses, 5000);
+update_statuses();
+
+{% end %}
+
+{% block core %}
+{% from cms import plugin_list %}
+{% from cms.grading import format_status_text %}
+{% from cms.grading.scoretypes import get_score_type %}
+
+<h1>Overview</h1>
+<span id="update_time"></span>
+
+{% if contest is not None %}
+<h2 id="title_submissions_status" class="toggling_on">Submissions status</h2>
+<div id="submissions_status">
+  <table id="submissions_status_table" class="sub_table">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Number</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="text-align: center;" colspan="100"><img src="{{ url_root }}/static/loading.gif" /></td></tr>
+    </tbody>
+  </table>
+  <div class="hr"></div>
+</div>
+{% end %}
+
+<h2 id="title_submissions" class="toggling_on">Submissions</h2>
+<div id="submissions">
+
+  {% if len(submissions) == 0 %}
+  <p>No submissions found.</p>
+
+  {% else %}
+  <table class="bordered">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>User</th>
+        <th>Task</th>
+        <th>Status</th>
+        <th>Files</th>
+        <th>Token</th>
+        <th>Comment</th>
+        <th>Reevaluate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sorted(submissions, key=lambda s: s.timestamp, reverse=True) %}
+        {% set shown_dataset = s.task.active_dataset %}
+        {% try %}
+          {% set current_score_type = get_score_type(dataset=shown_dataset) %}
+        {% except %}
+        {% end %}
+      <tr>
+        <td><a href="{{ url_root }}/submission/{{ s.id }}/{{ shown_dataset.id }}">{{ str(s.timestamp) }}</a></td>
+        <td><a href="{{ url_root }}/user/{{ s.user.id }}">{{ s.user.username }}</a></td>
+        <td><a href="{{ url_root }}/task/{{ s.task.id }}">{{ s.task.name }}</a></td>
+        <td>
+          {% set sr = s.get_result(shown_dataset) %}
+          {% if sr is None or sr.compilation_outcome is None %}
+          Compiling...
+          {% else %}
+          <div id="title_evaluation_{{ s.id }}" class="toggling_off">
+            {% if sr.compilation_outcome == "fail" %}
+            Compilation failed
+            <div  id="evaluation_{{ s.id }}" class="score_details" style="display: none;">
+            {% elif not sr.evaluated() %}
+            Evaluating...
+            <div  id="evaluation_{{ s.id }}" class="score_details" style="display: none;">
+            {% elif sr.scored() %}
+              {% try %}
+                {% set max_score = current_score_type.max_score %}
+              {% except %}
+                {% set max_score = "[Cannot get score type - see logs]" %}
+              {% end %}
+            Evaluated ({{ sr.score }} / {{ max_score }})
+            <div class="score_details" id="evaluation_{{ s.id }}" style="display: none;">
+              {% try %}
+                {% raw current_score_type.get_html_details(sr.score_details) %}
+              {% except %}
+              [Cannot get score type - see logs]
+              {% end %}
+            {% else %}
+            Evaluated
+            <div id="evaluation_{{ s.id }}" style="display: none;">
+              {% if sr.evaluated() %}
+              <h3>Testcases</h3>
+              <table class="nested bordered">
+                <thead>
+                  <tr>
+                    <th>Outcome</th>
+                    <th></th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for idx, ev in sorted((ev.codename, ev) for ev in sr.evaluations) %}
+                  <tr>
+                    <td>{{ ev.outcome }}</td>
+                    {% if s.token is not None or ev.testcase.public %}
+                    <td style="align: center;">&bullet;</td>
+                    {% else %}
+                    <td></td>
+                    {% end %}
+                    <td>{{ ev.text }}</td>
+                  </tr>
+                  {% end %}
+                </tbody>
+              </table>
+              {% end %}
+            {% end %}
+              <h3>Compilation output</h3><!-- TODO: trim long outputs and add facility to see raw -->
+              <pre>{% if sr.compilation_text is not None %}{{ format_status_text(sr.compilation_text) }}{% end %}</pre>
+            </div>
+          </div>
+
+          {% end %}
+        </td>
+        <td>
+          {% for filename in [x.filename for x in s.task.submission_format] %}
+            {% if filename in s.files %}
+              {% set real_filename = filename if s.language is None else filename.replace("%l", s.language) %}
+          <a href="javascript:void(0);" onclick="utils.show_file('{{ real_filename }}','{{ url_root }}/submission_file/{{ s.files[filename].id }}')">
+            {{ real_filename }}
+          </a>
+          <br/>
+            {% end %}
+          {% end %}
+        </td>
+        <td>
+          {% if s.token is None %}
+          No
+          {% else %}
+          Yes
+          {% end %}
+        </td>
+        <td>
+          {{ s.short_comment }}
+        </td>
+        <td>
+          {% set reevaluation_par_name = "submission" %}
+          {% set reevaluation_par_value = s.id %}
+          {% set reevaluation_par_dataset_id = shown_dataset.id %}
+          {% include reevaluation_buttons.html %}
+        </td>
+      </tr>
+      {% end %}
+    </tbody>
+  </table>
+  {% end %}
+  <div class="hr"></div>
+
+
+{% end %}
