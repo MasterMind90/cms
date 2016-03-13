@@ -236,46 +236,8 @@ var Scoreboard = new function () {
             var tasks = contest["tasks"];
             for (var j in tasks) {
                 var task = tasks[j];
-                var t_id = task["key"];
 
-                var score_class = self.get_score_class(user["t_" + t_id], task["max_score"]);
-
-                if(task.score_type == "ACMICPCApproximate"){
-
-                    var extra = {
-                        wrong_attempt: 0
-                    };
-                    if(user["te_"+t_id] !== undefined){
-                        extra = JSON.parse(user["te_"+t_id][0]);
-                    }
-
-                    if(user["t_"+t_id] <= 0){
-                        if(extra.wrong_attempt > 0){
-                            score_class = "score_50_60";
-                        }else{
-                            score_class = "score_0";
-                        }
-                    }else{
-                        if(extra.wrong_attempt > 0){
-                            score_class = "score_90_100";
-                        }else{
-                            score_class = "score_100";
-                        }
-                    }
-
-                    result += " \
-                    <td colspan=\"3\" class=\"score task " + score_class + "\" data-task=\"" + t_id +
-                    "\" data-sort_key=\"t_" + t_id + "\">" +
-                    round_to_str(user["t_" + t_id], task["score_precision"]);
-                    if(extra.wrong_attempt > 0){
-                      result += "(" +  round_to_str(extra.wrong_attempt, task["score_precision"]) + ")";
-                    }
-                    result += "</td>";
-
-                }else{
-                    result += " \
-                    <td colspan=\"3\" class=\"score task " + score_class + "\" data-task=\"" + t_id + "\" data-sort_key=\"t_" + t_id + "\">" + round_to_str(user["t_" + t_id], task["score_precision"]) + "</td>";
-                }
+                result += self.draw_score_cell(user, task);
             }
 
             var score_class = self.get_score_class(user["c_" + c_id], contest["max_score"]);
@@ -290,6 +252,60 @@ var Scoreboard = new function () {
 
         return result;
     };
+
+    self.draw_score_cell = function(user, task){
+        var t_id = task["key"];
+        var result = "";
+
+        var score_class = self.get_score_class(user["t_" + t_id], task["max_score"]);
+
+        if(task.score_type == "ACMICPCApproximate"){
+
+            var extra = {
+                wrong_attempt: 0
+            };
+            if(user["te_"+t_id] !== undefined){
+                extra = JSON.parse(user["te_"+t_id][0]);
+            }
+
+            if(user["t_"+t_id] <= 0){
+                if(extra.wrong_attempt > 0){
+                    score_class = "score_50_60";
+                }else{
+                    score_class = "score_0";
+                }
+            }else{
+                if(extra.wrong_attempt > 0){
+                    score_class = "score_90_100";
+                }else{
+                    score_class = "score_100";
+                }
+            }
+
+            result += " \
+            <td colspan=\"3\" class=\"score task " + score_class + "\" data-task=\"" + t_id +
+            "\" data-sort_key=\"t_" + t_id + "\">";
+
+            if(round_to_str(user["t_" + t_id], task["score_precision"]) <= 0){
+                if(extra.wrong_attempt == 0){
+                    result += "-";
+                }
+            }else{
+                result += round_to_str(user["t_" + t_id], task["score_precision"]);
+            }
+
+            if(extra.wrong_attempt > 0){
+                result += "(" +  round_to_str(extra.wrong_attempt, task["score_precision"]) + ")";
+            }
+            result += "</td>";
+
+        }else{
+            result += " \
+            <td colspan=\"3\" class=\"score task " + score_class + "\" data-task=\"" + t_id + "\" data-sort_key=\"t_" + t_id + "\">" + round_to_str(user["t_" + t_id], task["score_precision"]) + "</td>";
+        }
+
+        return result;
+    }
 
 
     self.get_score_class = function (score, max_score) {
@@ -457,21 +473,24 @@ var Scoreboard = new function () {
             if ($this.hasClass("global")) {
                 var max_score = DataStore.global_max_score;
                 $this.text(round_to_str(score, DataStore.global_score_precision));
+
+                var score_class = self.get_score_class(score, max_score);
+                $this.removeClass("score_0 score_0_10 score_10_20 score_20_30 score_30_40 score_40_50 score_50_60 score_60_70 score_70_80 score_80_90 score_90_100 score_100");
+                $this.addClass(score_class);
             } else if ($this.hasClass("contest")) {
                 var contest = DataStore.contests[$this.data("contest")];
                 var max_score = contest["max_score"];
                 $this.text(round_to_str(score, contest["score_precision"]));
+
+                var score_class = self.get_score_class(score, max_score);
+                $this.removeClass("score_0 score_0_10 score_10_20 score_20_30 score_30_40 score_40_50 score_50_60 score_60_70 score_70_80 score_80_90 score_90_100 score_100");
+                $this.addClass(score_class);
             } else if ($this.hasClass("task")) {
                 var task = DataStore.tasks[$this.data("task")];
-                var max_score = task["max_score"];
-                $this.text(round_to_str(score, task["score_precision"]));
+                $this.replaceWith(self.draw_score_cell(user, task));
             }
 
             // TODO we could user a data-* attribute to store the score class
-
-            var score_class = self.get_score_class(score, max_score);
-            $this.removeClass("score_0 score_0_10 score_10_20 score_20_30 score_30_40 score_40_50 score_50_60 score_60_70 score_70_80 score_80_90 score_90_100 score_100");
-            $this.addClass(score_class);
         });
 
         self.move_user(user);

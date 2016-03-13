@@ -23,6 +23,7 @@ from __future__ import unicode_literals
 
 import heapq
 import logging
+import json
 
 from cmsranking.Submission import store as submission_store
 from cmsranking.Subchange import store as subchange_store
@@ -118,15 +119,18 @@ class Score(object):
             self._last = self._submissions[s_id]
 
         if self._score_mode == "max":
-            score, extra = max([(0.0, {})] +
-                        [(submission.score, submission.extra)
-                         for submission in self._submissions.values()])
+            if(len(self._submissions.values()) == 0):
+                score = 0.0
+                extra = {}
+            else:
+                score, extra, time = max([(submission.score, submission.extra, submission.time)
+                             for submission in self._submissions.values()], key=lambda x: (x[0], x[2]))
         else:
             score = max(self._released.query(),
                         self._last.score if self._last is not None else 0.0)
             extra = change.extra # Don't know how this work
 
-        if score != self.get_score():
+        if((score != self.get_score()) or (extra != self.get_extra())):
             self._history.append((change.time, score, extra))
 
     def get_last(self):
@@ -270,9 +274,9 @@ class ScoringStore(object):
         """
         self._callbacks.append(callback)
 
-    def notify_callbacks(self, user, task, score, last):
+    def notify_callbacks(self, user, task, score, extra):
         for call in self._callbacks:
-            call(user, task, score, last.extra)
+            call(user, task, score, extra)
 
     def create_submission(self, key, submission):
         if submission.user not in self._scores:
@@ -284,10 +288,12 @@ class ScoringStore(object):
 
         score_obj = self._scores[submission.user][submission.task]
         old_score = score_obj.get_score()
+        old_extra = score_obj.get_extra()
         score_obj.create_submission(key, submission)
         new_score = score_obj.get_score()
-        if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
+        new_extra = score_obj.get_extra()
+        if old_score != new_score or old_extra != new_extra:
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra())
 
     def update_submission(self, key, old_submission, submission):
         if old_submission.user != submission.user or \
@@ -302,19 +308,23 @@ class ScoringStore(object):
 
         score_obj = self._scores[submission.user][submission.task]
         old_score = score_obj.get_score()
+        old_extra = score_obj.get_extra()
         score_obj.update_submission(key, submission)
         score_obj.update_score_mode(task["score_mode"])
         new_score = score_obj.get_score()
-        if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
+        new_extra = score_obj.get_extra()
+        if old_score != new_score or old_extra != new_extra:
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra())
 
     def delete_submission(self, key, submission):
         score_obj = self._scores[submission.user][submission.task]
         old_score = score_obj.get_score()
+        old_extra = score_obj.get_extra()
         score_obj.delete_submission(key)
         new_score = score_obj.get_score()
-        if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
+        new_extra = score_obj.get_extra()
+        if old_score != new_score or old_extra != new_extra:
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra())
 
         if len(self._scores[submission.user][submission.task]
                ._submissions) == 0:
@@ -326,10 +336,13 @@ class ScoringStore(object):
         submission = submission_store._store[subchange.submission]
         score_obj = self._scores[submission.user][submission.task]
         old_score = score_obj.get_score()
+        old_extra = score_obj.get_extra()
+        score_obj.delete_submission(key)
         score_obj.create_subchange(key, subchange)
         new_score = score_obj.get_score()
-        if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
+        new_extra = score_obj.get_extra()
+        if old_score != new_score or old_extra != new_extra:
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra())
 
     def update_subchange(self, key, old_subchange, subchange):
         if old_subchange.submission != subchange.submission:
@@ -340,10 +353,12 @@ class ScoringStore(object):
         submission = submission_store._store[subchange.submission]
         score_obj = self._scores[submission.user][submission.task]
         old_score = score_obj.get_score()
+        old_extra = score_obj.get_extra()
         score_obj.update_subchange(key, subchange)
         new_score = score_obj.get_score()
-        if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
+        new_extra = score_obj.get_extra()
+        if old_score != new_score or old_extra != new_extra:
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra())
 
     def delete_subchange(self, key, subchange):
         if subchange.submission not in submission_store:
@@ -354,10 +369,12 @@ class ScoringStore(object):
         submission = submission_store._store[subchange.submission]
         score_obj = self._scores[submission.user][submission.task]
         old_score = score_obj.get_score()
+        old_extra = score_obj.get_extra()
         score_obj.delete_subchange(key)
         new_score = score_obj.get_score()
-        if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
+        new_extra = score_obj.get_extra()
+        if old_score != new_score or old_extra != new_extra:
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra())
 
     def get_score(self, user, task):
         if user not in self._scores or task not in self._scores[user]:
@@ -399,7 +416,7 @@ class ScoringStore(object):
         # When an entry is popped, push the next entry for that
         # user/task (if any).
         while len(queue) != 0:
-            (time, score), user, task, scoring, index = heapq.heappop(queue)
+            (time, score, extra), user, task, scoring, index = heapq.heappop(queue)
             yield (user, task, time, score)
             if len(scoring._history) > index + 1:
                 heapq.heappush(queue, (scoring._history[index + 1],
