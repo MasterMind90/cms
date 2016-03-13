@@ -39,10 +39,11 @@ import gevent.queue
 import requests
 import requests.exceptions
 from urlparse import urljoin, urlsplit
+from sqlalchemy import func
 
 from cms import config
 from cms.io import Executor, QueueItem, TriggeredService, rpc_method
-from cms.db import SessionGen, Contest, Task, Submission
+from cms.db import SessionGen, Contest, Task, Submission, SubmissionResult
 from cms.grading.scoretypes import get_score_type
 from cmscommon.datetime import make_timestamp
 
@@ -379,10 +380,41 @@ class ProxyService(TriggeredService):
 
         # This check is probably useless.
         if submission_result is not None and submission_result.scored():
-            # We're sending the unrounded score to RWS
-            subchange_data["score"] = submission_result.score
-            subchange_data["extra"] = \
-                json.loads(submission_result.ranking_score_details)
+
+            with SessionGen() as session:
+                # Not sending data to the ranking if the submission is after the freeze time.
+                # But the ranking board need to know something was sent.
+                # So we will modify the score so that it would be insignificantly higher
+                # than what was previously achieved if it was achieved
+
+                contest = submission.task.contest
+                score_to_send = submission_result.score
+
+                if submission.timestamp > contest.freeze_time and score_to_send != 0.0:
+
+                    previous_score = session.query(func.max(SubmissionResult.score)) \
+                        .join(Submission) \
+                        .filter(Submission.timestamp < submission.timestamp) \
+                        .filter(Submission.task == submission.task) \
+                        .filter(Submission.user == submission.user).scalar()
+
+                    if previous_score == None:
+                        previous_score = 0.0
+
+                    if submission.task.active_dataset.score_type == "ACMICPCApproximate":
+                        # For ACMICPC rule, if previous score is already nonzero (correct),
+                        # Then just send 0.0. It should be ignored in the ranking server.
+                        if previous_score == 0.0:
+                            score_to_send = previous_score+0.01
+                        else:
+                            score_to_send = 0.0
+                    else:
+                        score_to_send = previous_score+0.01
+
+                # We're sending the unrounded score to RWS
+                subchange_data["score"] = score_to_send
+                subchange_data["extra"] = \
+                    json.loads(submission_result.ranking_score_details)
 
         self.scores_sent_to_rankings.add(submission.id)
 
