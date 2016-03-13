@@ -118,20 +118,25 @@ class Score(object):
                  self._submissions[s_id].time > self._last.time):
             self._last = self._submissions[s_id]
 
+        append_history = False
         if self._score_mode == "max":
-            if(len(self._submissions.values()) == 0):
-                score = 0.0
-                extra = {}
-            else:
-                score, extra, time = max([(submission.score, submission.extra, submission.time)
-                             for submission in self._submissions.values()], key=lambda x: (x[0], x[2]))
-        else:
-            score = max(self._released.query(),
-                        self._last.score if self._last is not None else 0.0)
-            extra = change.extra # Don't know how this work
 
-        if((score != self.get_score()) or (extra != self.get_extra())):
-            self._history.append((change.time, score, extra))
+            if change.score > self.get_score():
+                append_history = True
+            elif change.score == self.get_score() and change.extra != self.get_extra():
+                append_history = True
+            elif change.score == self.get_score() and change.time < self.get_time():
+                append_history = True
+            else:
+                append_history = False
+
+        else:
+            new_score = max(self._released.query(),
+                        self._last.score if self._last is not None else 0.0)
+            append_history = (new_score != self.get_score())
+
+        if append_history:
+            self._history.append((change.time, change.score, change.extra))
 
     def get_last(self):
         return self._last
@@ -141,6 +146,9 @@ class Score(object):
 
     def get_score(self):
         return self._history[-1][1] if len(self._history) > 0 else 0.0
+
+    def get_time(self):
+        return self._history[-1][0] if len(self._history) > 0 else 10000000000000
 
     def reset_history(self):
         # Delete everything except the submissions and the subchanges.
@@ -293,7 +301,7 @@ class ScoringStore(object):
         new_score = score_obj.get_score()
         new_extra = score_obj.get_extra()
         if old_score != new_score or old_extra != new_extra:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), submission.time)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), score_obj.get_time())
 
     def update_submission(self, key, old_submission, submission):
         if old_submission.user != submission.user or \
@@ -314,7 +322,7 @@ class ScoringStore(object):
         new_score = score_obj.get_score()
         new_extra = score_obj.get_extra()
         if old_score != new_score or old_extra != new_extra:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), submission.time)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), score_obj.get_time())
 
     def delete_submission(self, key, submission):
         score_obj = self._scores[submission.user][submission.task]
@@ -324,7 +332,7 @@ class ScoringStore(object):
         new_score = score_obj.get_score()
         new_extra = score_obj.get_extra()
         if old_score != new_score or old_extra != new_extra:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), submission.time)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), score_obj.get_time())
 
         if len(self._scores[submission.user][submission.task]
                ._submissions) == 0:
@@ -342,7 +350,7 @@ class ScoringStore(object):
         new_score = score_obj.get_score()
         new_extra = score_obj.get_extra()
         if old_score != new_score or old_extra != new_extra:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), submission.time)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), score_obj.get_time())
 
     def update_subchange(self, key, old_subchange, subchange):
         if old_subchange.submission != subchange.submission:
@@ -358,7 +366,7 @@ class ScoringStore(object):
         new_score = score_obj.get_score()
         new_extra = score_obj.get_extra()
         if old_score != new_score or old_extra != new_extra:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), submission.time)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), score_obj.get_time())
 
     def delete_subchange(self, key, subchange):
         if subchange.submission not in submission_store:
@@ -374,7 +382,7 @@ class ScoringStore(object):
         new_score = score_obj.get_score()
         new_extra = score_obj.get_extra()
         if old_score != new_score or old_extra != new_extra:
-            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), submission.time)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_extra(), score_obj.get_time())
 
     def get_score(self, user, task):
         if user not in self._scores or task not in self._scores[user]:

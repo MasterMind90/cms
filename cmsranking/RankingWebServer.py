@@ -330,7 +330,7 @@ def ScoreHandler(request, response):
                 result.setdefault(u_id, dict())[t_id] = {
                     "score": score.get_score(),
                     "extra": score.get_extra(),
-                    "time": score.get_last().time
+                    "time": score.get_time()
                 }
 
     response.status_code = 200
