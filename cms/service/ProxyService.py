@@ -87,6 +87,7 @@ def safe_put_data(ranking, resource, data, operation):
         # XXX With requests-1.2 auth is automatically extracted from
         # the URL: there is no need for this.
         auth = urlsplit(url)
+        logger.info("Sending data %s"%json.dumps(data, encoding="utf-8"))
         res = requests.put(url, json.dumps(data, encoding="utf-8"),
                            auth=(auth.username, auth.password),
                            headers={'content-type': 'application/json'},
@@ -487,6 +488,20 @@ class ProxyService(TriggeredService):
             # Update RWS.
             for operation in self.operations_for_token(submission):
                 self.enqueue(operation)
+
+    @rpc_method
+    def update_all(self, args=None):
+        """ A utility rpc that update the ranking server of all data
+        """
+        self.reinitialize();
+        with SessionGen() as session:
+            for submission in session.query(Submission).all():
+                # Update RWS.
+                if not submission.user.hidden and \
+                        submission.get_result() is not None and \
+                        submission.get_result().scored():
+                    for operation in self.operations_for_score(submission):
+                        self.enqueue(operation)
 
     @rpc_method
     def dataset_updated(self, task_id):

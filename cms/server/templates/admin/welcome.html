@@ -95,6 +95,15 @@ function disable_worker(shard) {
     }
 }
 
+function refresh_ranking_server(){
+    cmsrpc_request("{{ url_root }}",
+                   "ProxyService", 0,
+                   "update_all",
+                   {},
+                   function() {
+                   });
+}
+
 function update_workers_status(response)
 {
     var table = $("#workers_status_table > tbody");
@@ -225,6 +234,8 @@ update_statuses();
 
 <h1>Overview</h1>
 <span id="update_time"></span>
+
+<a href="javascript:refresh_ranking_server()">Refresh Ranking Server</a>
 
 {% if contest is not None %}
 <h2 id="title_submissions_status" class="toggling_on">Submissions status</h2>
