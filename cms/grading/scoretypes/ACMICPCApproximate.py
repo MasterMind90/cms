@@ -168,7 +168,7 @@ Time Penalty : {{ details["time_penalty"] }}<br />
             score -= before_count*penalty
 
             contest_start = submission_result.submission.task.contest.start
-            second_elapsed = (datetime.datetime.utcnow() - contest_start).total_seconds()
+            second_elapsed = (submission_result.submission.timestamp - contest_start).total_seconds()
             time_penalty = time_decay * second_elapsed
             score -= time_penalty
 
@@ -192,13 +192,14 @@ Time Penalty : {{ details["time_penalty"] }}<br />
 
             public_score = score
             public_details = details.copy()
+            to_rws = details.copy()
 
             details['testcases'] = testcases
             public_details['testcases'] = public_testcases
 
             return score, json.dumps(details), \
                 public_score, json.dumps(public_details), \
-                json.dumps([])
+                json.dumps([json.dumps(to_rws)])
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.
