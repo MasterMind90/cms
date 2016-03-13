@@ -15,6 +15,24 @@ of contests, tasks, scorings, etc. Nonetheless, CMS has been
 explicitly build to be used in the 2012 International Olympiad in
 Informatics, held in September 2012 in Italy.
 
+This Branch
+-----------
+
+This branch is a fork of CMS v1.2.0 . It is modified to be used in
+[IIUM Code Jam 2016](http://iiumicpcteam.com/2016/03/iium-code-jam-2016/). Among the differences are:
+
+- Some modification on REQUIREMENTS.txt to force lower version of some dependencies so that it could run on newer linux.
+- A score type called ACMICPCApproximate that tries to approximate ACM-ICPC style rankings.
+- The scoreboard has minor visual changes when using the ACMICPCApproximate score type.
+- A contest freeze time in which submission after that time will have a different visual cues on the scoreboard. Note: This is only a visual change, no security consideration have been put it in.
+- A page in admin server that list down all submission.
+- A button in admin server that force resending all data to ranking server.
+
+ACMICPCApproximate Score Type
+-----------------------------
+
+This score type tries to simulate ACM-ICPC ranking system in which there would be penalty for wrong attempt and faster submission would result in higher score. It's parameter is an array containing three number `base`, `penalty` and `time_decay`. The resulting score is `base` - (`penalty` x `wrong attempt`) - (`time_decay` x `seconds from contest start`). A good approximation would be [1000,20,0.0166], but it is still possible for the ranking to behave differently from actual ACM-ICPC ranking system.
+
 
 Download
 --------
