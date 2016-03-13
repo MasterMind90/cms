@@ -118,18 +118,22 @@ class Score(object):
             self._last = self._submissions[s_id]
 
         if self._score_mode == "max":
-            score = max([0.0] +
-                        [submission.score
+            score, extra = max([(0.0, {})] +
+                        [(submission.score, submission.extra)
                          for submission in self._submissions.values()])
         else:
             score = max(self._released.query(),
                         self._last.score if self._last is not None else 0.0)
+            extra = change.extra # Don't know how this work
 
         if score != self.get_score():
-            self._history.append((change.time, score))
+            self._history.append((change.time, score, extra))
 
     def get_last(self):
         return self._last
+
+    def get_extra(self):
+        return self._history[-1][2] if len(self._history) > 0 else {}
 
     def get_score(self):
         return self._history[-1][1] if len(self._history) > 0 else 0.0

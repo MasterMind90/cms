@@ -326,7 +326,7 @@ def ScoreHandler(request, response):
     for u_id, tasks in Scoring.store._scores.iteritems():
         for t_id, score in tasks.iteritems():
             if score.get_score() > 0.0:
-                result.setdefault(u_id, dict())[t_id] = { "score": score.get_score(), "extra": score.get_last().extra }
+                result.setdefault(u_id, dict())[t_id] = { "score": score.get_score(), "extra": score.get_extra() }
 
     response.status_code = 200
     response.headers[b'Timestamp'] = b"%0.6f" % time.time()
