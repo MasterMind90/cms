@@ -581,7 +581,7 @@ var DataStore = new function () {
                 self.score_init_time = parseFloat(xhr.getResponseHeader("Timestamp"));
                 for (var u_id in data) {
                     for (var t_id in data[u_id]) {
-                        self.set_score(u_id, t_id, data[u_id][t_id].score, data[u_id][t_id].extra);
+                        self.set_score(u_id, t_id, data[u_id][t_id].score, data[u_id][t_id].extra, data[u_id][t_id].time);
                     }
                 }
                 self.init_ranks();
@@ -595,10 +595,10 @@ var DataStore = new function () {
 
     self.score_listener = function (event) {
         var data = JSON.parse(event.data)
-        self.set_score(data.user, data.task, data.score, data.extra);
+        self.set_score(data.user, data.task, data.score, data.extra, data.time);
     };
 
-    self.set_score = function (u_id, t_id, new_t_score, extras) {
+    self.set_score = function (u_id, t_id, new_t_score, extras, time) {
         /* It may be "nice" to check that the user and task do actually exists,
            even if the server should already ensure it!
          */
@@ -613,6 +613,7 @@ var DataStore = new function () {
         var old_t_score = user["t_" + t_id];
         user["t_" + t_id] = new_t_score;
         user["te_" + t_id] = extras;
+        user["tt_" + t_id] = time;
 
         // Contest
         var new_c_score = 0.0;  // = max(user's score on t for t in contest.tasks)

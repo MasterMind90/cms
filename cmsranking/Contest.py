@@ -79,6 +79,7 @@ class Contest(Entity):
         self.validate(data)
         self.name = data['name']
         self.begin = data['begin']
+        self.freeze_time = data['freeze_time']
         self.end = data['end']
         self.score_precision = data['score_precision']
 

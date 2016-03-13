@@ -79,6 +79,10 @@
       <td><input type="text" name="stop" value="{{ str(contest.stop) }}"></td>
     </tr>
     <tr>
+      <td>Freeze Time (in UTC)</td>
+      <td><input type="text" name="freeze_time" value="{{ str(contest.freeze_time) }}"></td>
+    </tr>
+    <tr>
       <td>Timezone (like "Europe/Rome", "America/New_York", ...)</td>
       <td><input type="text" name="timezone" value="{{ contest.timezone if contest.timezone is not None else "" }}"></td>
     </tr>

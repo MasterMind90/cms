@@ -323,6 +323,7 @@ class ProxyService(TriggeredService):
                 "name": contest.description,
                 "begin": int(make_timestamp(contest.start)),
                 "end": int(make_timestamp(contest.stop)),
+                "freeze_time": int(make_timestamp(contest.freeze_time)),
                 "score_precision": contest.score_precision}
 
             users = dict()

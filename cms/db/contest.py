@@ -143,6 +143,10 @@ class Contest(Base):
         DateTime,
         nullable=False,
         default=datetime(2100, 01, 01))
+    freeze_time = Column(
+        DateTime,
+        nullable=False,
+        default=datetime(2100, 01, 01))
 
     # Timezone for the contest. All timestamps in CWS will be shown
     # using the timezone associated to the logged-in user or (if it's

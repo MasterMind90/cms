@@ -801,6 +801,11 @@ abbr {
     opacity: 1;
 }
 
+.score_froze {
+    background-color: rgb(104, 11, 144);
+    /*background-image: linear-gradient(rgb(204, 0, 0), rgb(244, 0, 0));*/
+}
+
 .score_0 {
     background-color: transparent;
     /*background-image: linear-gradient(rgb(204, 0, 0), rgb(244, 0, 0));*/

@@ -75,6 +75,10 @@
       <td><input type="text" name="stop" value="{{ str(timestamp) }}"></td>
     </tr>
     <tr>
+      <td>Freeze Time (in UTC)</td>
+      <td><input type="text" name="freeze_time" value="{{ str(timestamp) }}"></td>
+    </tr>
+    <tr>
       <td>Timezone (like "Europe/Rome", "America/New_York", ...)</td>
       <td><input type="text" name="timezone" value=""></td>
     </tr>
@@ -106,4 +110,3 @@
   <input type="submit"><input type="reset" value="Reset">
 </form>
 {% end %}
-

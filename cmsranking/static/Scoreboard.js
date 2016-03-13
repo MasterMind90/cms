@@ -255,11 +255,19 @@ var Scoreboard = new function () {
 
     self.draw_score_cell = function(user, task){
         var t_id = task["key"];
+        var contest = DataStore.contests[task["contest"]];
         var result = "";
+        var submission_time = 0;
+        if(user["te_"+t_id] !== undefined){
+            submission_time = user["tt_"+t_id];
+        }
 
         var score_class = self.get_score_class(user["t_" + t_id], task["max_score"]);
 
-        if(task.score_type == "ACMICPCApproximate"){
+        if(contest.freeze_time < submission_time){
+            result += " \
+            <td colspan=\"3\" class=\"score task score_froze\" data-task=\"" + t_id + "\" data-sort_key=\"t_" + t_id + "\">?</td>";
+        }else if(task.score_type == "ACMICPCApproximate"){
 
             var extra = {
                 wrong_attempt: 0
