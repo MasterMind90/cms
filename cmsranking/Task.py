@@ -56,6 +56,7 @@ class Task(Entity):
         self.extra_headers = None
         self.order = None
         self.score_mode = "max_tokened_last"
+        self.score_type = None
 
     @staticmethod
     def validate(data):
@@ -73,6 +74,8 @@ class Task(Entity):
                 "Field 'short_name' isn't a string"
             assert isinstance(data['contest'], six.text_type), \
                 "Field 'contest' isn't a string"
+            if isinstance(data['max_score'], int):
+                data['max_score'] = float(data['max_score'])
             assert isinstance(data['max_score'], float), \
                 "Field 'max_score' isn't a float"
             assert isinstance(data['score_precision'], six.integer_types), \
@@ -103,6 +106,7 @@ class Task(Entity):
         self.extra_headers = data['extra_headers']
         self.order = data['order']
         self.score_mode = data['score_mode']
+        self.score_type = data['score_type']
 
     def get(self):
         result = self.__dict__.copy()

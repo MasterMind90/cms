@@ -87,7 +87,6 @@ def safe_put_data(ranking, resource, data, operation):
         # XXX With requests-1.2 auth is automatically extracted from
         # the URL: there is no need for this.
         auth = urlsplit(url)
-        logger.info("Sending data %s"%json.dumps(data, encoding="utf-8"))
         res = requests.put(url, json.dumps(data, encoding="utf-8"),
                            auth=(auth.username, auth.password),
                            headers={'content-type': 'application/json'},
@@ -347,7 +346,8 @@ class ProxyService(TriggeredService):
                      "max_score": score_type.max_score,
                      "extra_headers": score_type.ranking_headers,
                      "score_precision": task.score_precision,
-                     "score_mode": task.score_mode}
+                     "score_mode": task.score_mode,
+                     "score_type": score_type.__class__.__name__ }
 
         self.enqueue(ProxyOperation(ProxyExecutor.CONTEST_TYPE,
                                     {contest_id: contest_data}))

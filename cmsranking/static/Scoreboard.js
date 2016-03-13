@@ -239,8 +239,43 @@ var Scoreboard = new function () {
                 var t_id = task["key"];
 
                 var score_class = self.get_score_class(user["t_" + t_id], task["max_score"]);
-                result += " \
-    <td colspan=\"3\" class=\"score task " + score_class + "\" data-task=\"" + t_id + "\" data-sort_key=\"t_" + t_id + "\">" + round_to_str(user["t_" + t_id], task["score_precision"]) + "</td>";
+
+                if(task.score_type == "ACMICPCApproximate"){
+
+                    var extra = {
+                        wrong_attempt: 0
+                    };
+                    if(user["te_"+t_id] !== undefined){
+                        extra = JSON.parse(user["te_"+t_id][0]);
+                    }
+
+                    if(user["t_"+t_id] <= 0){
+                        if(extra.wrong_attempt > 0){
+                            score_class = "score_50_60";
+                        }else{
+                            score_class = "score_0";
+                        }
+                    }else{
+                        if(extra.wrong_attempt > 0){
+                            score_class = "score_90_100";
+                        }else{
+                            score_class = "score_100";
+                        }
+                    }
+
+                    result += " \
+                    <td colspan=\"3\" class=\"score task " + score_class + "\" data-task=\"" + t_id +
+                    "\" data-sort_key=\"t_" + t_id + "\">" +
+                    round_to_str(user["t_" + t_id], task["score_precision"]);
+                    if(extra.wrong_attempt > 0){
+                      result += "(" +  round_to_str(extra.wrong_attempt, task["score_precision"]) + ")";
+                    }
+                    result += "</td>";
+
+                }else{
+                    result += " \
+                    <td colspan=\"3\" class=\"score task " + score_class + "\" data-task=\"" + t_id + "\" data-sort_key=\"t_" + t_id + "\">" + round_to_str(user["t_" + t_id], task["score_precision"]) + "</td>";
+                }
             }
 
             var score_class = self.get_score_class(user["c_" + c_id], contest["max_score"]);

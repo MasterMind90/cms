@@ -128,6 +128,9 @@ class Score(object):
         if score != self.get_score():
             self._history.append((change.time, score))
 
+    def get_last(self):
+        return self._last
+
     def get_score(self):
         return self._history[-1][1] if len(self._history) > 0 else 0.0
 
@@ -263,9 +266,9 @@ class ScoringStore(object):
         """
         self._callbacks.append(callback)
 
-    def notify_callbacks(self, user, task, score):
+    def notify_callbacks(self, user, task, score, last):
         for call in self._callbacks:
-            call(user, task, score)
+            call(user, task, score, last.extra)
 
     def create_submission(self, key, submission):
         if submission.user not in self._scores:
@@ -280,7 +283,7 @@ class ScoringStore(object):
         score_obj.create_submission(key, submission)
         new_score = score_obj.get_score()
         if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
 
     def update_submission(self, key, old_submission, submission):
         if old_submission.user != submission.user or \
@@ -299,7 +302,7 @@ class ScoringStore(object):
         score_obj.update_score_mode(task["score_mode"])
         new_score = score_obj.get_score()
         if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
 
     def delete_submission(self, key, submission):
         score_obj = self._scores[submission.user][submission.task]
@@ -307,7 +310,7 @@ class ScoringStore(object):
         score_obj.delete_submission(key)
         new_score = score_obj.get_score()
         if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
 
         if len(self._scores[submission.user][submission.task]
                ._submissions) == 0:
@@ -322,7 +325,7 @@ class ScoringStore(object):
         score_obj.create_subchange(key, subchange)
         new_score = score_obj.get_score()
         if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
 
     def update_subchange(self, key, old_subchange, subchange):
         if old_subchange.submission != subchange.submission:
@@ -336,7 +339,7 @@ class ScoringStore(object):
         score_obj.update_subchange(key, subchange)
         new_score = score_obj.get_score()
         if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
 
     def delete_subchange(self, key, subchange):
         if subchange.submission not in submission_store:
@@ -350,7 +353,7 @@ class ScoringStore(object):
         score_obj.delete_subchange(key)
         new_score = score_obj.get_score()
         if old_score != new_score:
-            self.notify_callbacks(submission.user, submission.task, new_score)
+            self.notify_callbacks(submission.user, submission.task, new_score, score_obj.get_last())
 
     def get_score(self, user, task):
         if user not in self._scores or task not in self._scores[user]:
@@ -358,6 +361,13 @@ class ScoringStore(object):
             # "no submissions" and "submission with 0 points"
             return 0
         return self._scores[user][task].get_score()
+
+    def get_last_subchange(self, user, task):
+        if user not in self._scores or task not in self._scores[user]:
+            # We may want to raise an exception to distinguish between
+            # "no submissions" and "submission with 0 points"
+            return {}
+        return self._scores[user][task].get_last()
 
     def get_submissions(self, user, task):
         if user not in self._scores or task not in self._scores[user]:
