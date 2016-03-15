@@ -128,9 +128,6 @@ Time Penalty : {{ details["time_penalty"] }}<br />
     def compute_score(self, submission_result):
         """See ScoreType.compute_score."""
         # Actually, this means it didn't even compile!
-        if not submission_result.evaluated():
-            return None, "[]", None, "[]", json.dumps([])
-
         with SessionGen() as session:
             base, penalty, time_decay = self.params()
 
@@ -142,22 +139,25 @@ Time Penalty : {{ details["time_penalty"] }}<br />
             public_testcases = []
             has_wrong = False
 
-            for idx in indices:
-                this_score = float(evaluations[idx].outcome)
-                tc_outcome = self.get_public_outcome(this_score)
-                if this_score <= 0.0:
-                    has_wrong = True
-                testcases.append({
-                    "idx": idx,
-                    "outcome": tc_outcome,
-                    "text": evaluations[idx].text,
-                    "time": evaluations[idx].execution_time,
-                    "memory": evaluations[idx].execution_memory,
-                    })
-                if self.public_testcases[idx]:
-                    public_testcases.append(testcases[-1])
-                else:
-                    public_testcases.append({"idx": idx})
+            if not submission_result.evaluated():
+                has_wrong = True
+            else:
+                for idx in indices:
+                    this_score = float(evaluations[idx].outcome)
+                    tc_outcome = self.get_public_outcome(this_score)
+                    if this_score <= 0.0:
+                        has_wrong = True
+                    testcases.append({
+                        "idx": idx,
+                        "outcome": tc_outcome,
+                        "text": evaluations[idx].text,
+                        "time": evaluations[idx].execution_time,
+                        "memory": evaluations[idx].execution_memory,
+                        })
+                    if self.public_testcases[idx]:
+                        public_testcases.append(testcases[-1])
+                    else:
+                        public_testcases.append({"idx": idx})
 
             score = base
             before_count = session.query(Submission).join(SubmissionResult) \
@@ -165,6 +165,8 @@ Time Penalty : {{ details["time_penalty"] }}<br />
                 .filter(Submission.task_id == submission_result.submission.task_id) \
                 .filter(SubmissionResult.score == 0) \
                 .count()
+            if has_wrong: # This own submission is a wrong attempt
+                before_count+=1
             score -= before_count*penalty
 
             contest_start = submission_result.submission.task.contest.start
