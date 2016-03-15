@@ -125,7 +125,7 @@ class Score(object):
                 append_history = True
             elif change.score == self.get_score() and change.extra != self.get_extra():
                 append_history = True
-            elif change.score == self.get_score() and change.time < self.get_time():
+            elif change.score == self.get_score() and change.time > self.get_time():
                 append_history = True
             else:
                 append_history = False
