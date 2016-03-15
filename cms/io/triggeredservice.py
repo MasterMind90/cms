@@ -132,9 +132,9 @@ class Executor(object):  # pylint: disable=R0921
                     logger.info("Executing operations `%s' and %d more.",
                                 to_execute[0].item, len(to_execute) - 1)
                     self.execute(to_execute)
-                    logger.info("Operations `%s' and %d more concluded "
-                                "successfully.", to_execute[0].item,
-                                len(to_execute) - 1)
+                    for executed in to_execute:
+                        logger.info("Operations `%s' concluded "
+                                    "successfully.", executed.item)
                 except Exception:
                     logger.error(
                         "Unexpected error when executing operation "
