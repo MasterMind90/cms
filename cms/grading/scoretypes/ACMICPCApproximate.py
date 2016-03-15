@@ -129,7 +129,7 @@ Time Penalty : {{ details["time_penalty"] }}<br />
         """See ScoreType.compute_score."""
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated():
-            return 0.0, "[]", 0.0, "[]", json.dumps([])
+            return None, "[]", None, "[]", json.dumps([])
 
         with SessionGen() as session:
             base, penalty, time_decay = self.params()
