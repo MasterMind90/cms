@@ -24,9 +24,10 @@ This branch is a fork of CMS v1.2.0 . It is modified to be used in
 - Some modification on REQUIREMENTS.txt to force lower version of some dependencies so that it could run on newer linux.
 - A score type called ACMICPCApproximate that tries to approximate ACM-ICPC style rankings.
 - The scoreboard has minor visual changes when using the ACMICPCApproximate score type.
-- A contest freeze time in which submission after that time will have a different visual cues on the scoreboard. 
+- A contest freeze time in which submission after that time will have a different visual cues on the scoreboard.
 - A page in admin server that list down all submission.
 - A button in admin server that force resending all data to ranking server.
+- Does not change the filename internally so that java compilation works as expected.
 
 ACMICPCApproximate Score Type
 -----------------------------

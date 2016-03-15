@@ -1029,7 +1029,9 @@ class SubmitHandler(BaseHandler):
         # (user_assigned_filename, content).
         files = {}
         for uploaded, data in self.request.files.iteritems():
-            files[uploaded] = (data[0]["filename"], data[0]["body"])
+            # Don't change the name. It makes it harder for Java user.
+            newname = re.sub(r"\..*$", r".%l", data[0]["filename"])
+            files[newname] = (data[0]["filename"], data[0]["body"])
 
         # If we allow partial submissions, implicitly we recover the
         # non-submitted files from the previous submission. And put them
