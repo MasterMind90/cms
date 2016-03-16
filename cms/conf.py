@@ -68,6 +68,8 @@ class Config(object):
         self.keep_sandbox = True
         self.use_cgroups = True
         self.sandbox_implementation = 'isolate'
+        self.use_jvm = False # Use normal JVM instead of gcj
+        self.jvm_flags = [] # For java execution
 
         # Sandbox.
         self.max_file_size = 1048576

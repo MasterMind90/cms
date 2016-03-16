@@ -168,7 +168,8 @@
     "max_jobs_per_user": 10,
     "pdf_printing_allowed": false,
 
-
+    "use_jvm": true,
+    "jvm_flags": ["-Xmx512M", "-Xmn10M", "-XX:MaxHeapSize=512m", "-XX:InitialHeapSize=512m", "-XX:CompressedClassSpaceSize=64m","-XX:MaxMetaspaceSize=128m"],
 
     "_help": "This is the end of this file."
 }

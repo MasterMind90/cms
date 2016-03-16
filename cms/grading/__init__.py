@@ -256,9 +256,12 @@ def get_compilation_commands(language, source_filenames, executable_filename,
         commands.append(command)
     elif language == LANG_JAVA:
         class_name = os.path.splitext(source_filenames[0])[0]
-        command = ["/usr/bin/gcj", "--main=%s" % class_name, "-O3", "-o",
-                   executable_filename] + source_filenames
-        commands.append(command)
+        if config.use_jvm:
+            commands.append(["/usr/bin/javac"] + source_filenames)
+            commands.append(["/usr/bin/jar", "cfe0", executable_filename, class_name, "." ])
+        else:
+            command = ["/usr/bin/gcj", "--main=%s" % class_name, "-O3", "-o", executable_filename] + source_filenames
+            commands.append(command)
     else:
         raise ValueError("Unknown language %s." % language)
     return commands
@@ -278,9 +281,14 @@ def get_evaluation_commands(language, executable_filename):
 
     """
     commands = []
-    if language in (LANG_C, LANG_CPP, LANG_PASCAL, LANG_JAVA):
+    if language in (LANG_C, LANG_CPP, LANG_PASCAL):
         command = [os.path.join(".", executable_filename)]
         commands.append(command)
+    elif language == LANG_JAVA:
+        if config.use_jvm:
+            commands.append([os.path.realpath("/usr/bin/java")]+config.jvm_flags+["-jar", executable_filename])
+        else:
+            commands.append([os.path.join(".", executable_filename)])
     elif language == LANG_PYTHON:
         # In order to use Python 3 change it to:
         # /usr/bin/python3 %s
@@ -349,6 +357,8 @@ def compilation_step(sandbox, commands):
     sandbox.timeout = 10
     sandbox.wallclock_timeout = 20
     sandbox.address_space = 512 * 1024
+    if config.use_jvm:
+        sandbox.address_space *= 10 # For some reason, java require this to be big
     sandbox.stdout_file = "compiler_stdout.txt"
     sandbox.stderr_file = "compiler_stderr.txt"
 
@@ -510,6 +520,8 @@ def evaluation_step_before_run(sandbox, command,
         sandbox.timeout = 0
         sandbox.wallclock_timeout = 0
     sandbox.address_space = memory_limit * 1024
+    if config.use_jvm:
+        sandbox.max_processes = None # For some reason.. java need this
     sandbox.fsize = config.max_file_size
 
     if stdin_redirect is not None:

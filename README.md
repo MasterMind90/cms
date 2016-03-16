@@ -28,6 +28,9 @@ This branch is a fork of CMS v1.2.0 . It is modified to be used in
 - A page in admin server that list down all submission.
 - A button in admin server that force resending all data to ranking server.
 - Does not change the filename internally so that java compilation works as expected.
+- Added a config to use normal JVM instead of gcj for Java.
+  Note: The sandbox works strangely with JVM. Using the default jvm_flags,
+  it won't even run if the problem memory limit is set lower than 2GB.
 
 ACMICPCApproximate Score Type
 -----------------------------
