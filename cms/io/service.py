@@ -152,7 +152,10 @@ class Service(object):
         if self.name != "LogService":
             log_service = self.connect_to(ServiceCoord("LogService", 0))
             remote_handler = LogServiceHandler(log_service)
-            remote_handler.setLevel(logging.DEBUG)
+            if config.log_debug:
+                remote_handler.setLevel(logging.DEBUG)
+            else:
+                remote_handler.setLevel(logging.INFO)
             remote_handler.addFilter(filter_)
             root_logger.addHandler(remote_handler)
 

@@ -57,6 +57,7 @@ class Config(object):
         self.temp_dir = "/tmp"
         self.backdoor = False
         self.file_log_debug = False
+        self.log_debug = False
 
         # Database.
         self.database = "postgresql+psycopg2://cmsuser@localhost/cms"
