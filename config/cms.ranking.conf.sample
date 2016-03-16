@@ -12,5 +12,10 @@
     "username":   "usern4me",
     "password":   "passw0rd",
 
+    "_help": "UI Stuff",
+    "show_team": true,
+    "first_name_is_name": false,
+
+
     "_help": "This is the end of this file."
 }

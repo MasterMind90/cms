@@ -792,8 +792,10 @@ var DataStore = new function () {
         self.inits_todo = 2;
         self.init_callback = callback;
 
-        self.init_contests();
-        self.init_teams();
+        Config.fetch_config(function(){
+            self.init_contests();
+            self.init_teams();
+        });
     };
 
 

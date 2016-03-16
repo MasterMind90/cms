@@ -318,6 +318,13 @@ def HistoryHandler(request, response):
     response.mimetype = "application/json"
     response.data = json.dumps(result)
 
+def ConfigHandler(request, response):
+    if request.accept_mimetypes.quality("application/json") <= 0:
+        raise NotAcceptable()
+
+    response.status_code = 200
+    response.mimetype = "application/json"
+    response.data = json.dumps(config.to_clientside())
 
 def ScoreHandler(request, response):
     if request.accept_mimetypes.quality("application/json") <= 0:
@@ -409,6 +416,7 @@ class RoutingHandler(object):
              Rule("/scores", methods=["GET"], endpoint="scores"),
              Rule("/events", methods=["GET"], endpoint="events"),
              Rule("/logo", methods=["GET"], endpoint="logo"),
+             Rule("/config", methods=["GET"], endpoint="config"),
              ], encoding_errors="strict")
 
         self.event_handler = event_handler
@@ -439,6 +447,8 @@ class RoutingHandler(object):
 
             if endpoint == "sublist":
                 SubListHandler(request, response, args["user_id"])
+            elif endpoint == "config":
+                ConfigHandler(request, response)
             elif endpoint == "scores":
                 ScoreHandler(request, response)
             elif endpoint == "history":

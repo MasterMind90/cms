@@ -134,10 +134,21 @@ var Scoreboard = new function () {
         // this much with JS and HTML are extremely welcome!
         var result = " \
 <col class=\"sel\"/> \
-<col class=\"rank\"/> \
-<col class=\"f_name\"/> <col/><col/><col/><col/><col/><col/><col/><col/><col/> \
-<col class=\"l_name\"/> <col/><col/><col/><col/><col/><col/><col/><col/><col/> \
-<col class=\"team\"/>";
+<col class=\"rank\"/> ";
+
+        if(Config.first_name_is_name){
+            // Use f_name as the only name.
+            result += " \
+            <col class=\"f_name\"/> <col/><col/><col/><col/><col/><col/><col/><col/><col/>";
+        }else{
+            result += " \
+            <col class=\"f_name\"/> <col/><col/><col/><col/><col/><col/><col/><col/><col/> \
+            <col class=\"l_name\"/> <col/><col/><col/><col/><col/><col/><col/><col/><col/>";
+        }
+
+        if(Config.show_team){
+            result += "<col class=\"team\"/>";
+        }
 
         var contests = DataStore.contest_list;
         for (var i in contests) {
@@ -157,8 +168,10 @@ var Scoreboard = new function () {
 <col class=\"score contest\" data-contest=\"" + c_id + "\" data-sort_key=\"c_" + c_id + "\"/> <col/><col/><col/>";
         }
 
-        result += " \
-<col class=\"score global\" data-sort_key=\"global\"/> <col/><col/><col/><col/>";
+        if(contests.length != 1){
+            result += " \
+            <col class=\"score global\" data-sort_key=\"global\"/> <col/><col/><col/><col/>";
+        }
 
         return result;
     };
@@ -169,10 +182,22 @@ var Scoreboard = new function () {
         var result = " \
 <tr> \
     <th class=\"sel\"></th> \
-    <th class=\"rank\">Rank</th> \
+    <th class=\"rank\">Rank</th>";
+
+        if(Config.first_name_is_name){
+            result += " \
+    <th colspan=\"10\" class=\"f_name\">Name</th>";
+        }else{
+            result += " \
     <th colspan=\"10\" class=\"f_name\">First Name</th> \
-    <th colspan=\"10\" class=\"l_name\">Last Name</th> \
+    <th colspan=\"10\" class=\"l_name\">Last Name</th>";
+
+        }
+
+        if(Config.show_team){
+            result += " \
     <th class=\"team\">Team</th>";
+        }
 
         var contests = DataStore.contest_list;
         for (var i in contests) {
@@ -192,9 +217,11 @@ var Scoreboard = new function () {
     <th colspan=\"4\" class=\"score contest\" data-contest=\"" + c_id + "\" data-sort_key=\"c_" + c_id + "\">" + contest["name"] + "</th>";
         }
 
-        result += " \
+        if(contests.length !== 1){
+            result += " \
     <th colspan=\"5\" class=\"score global\" data-sort_key=\"global\">Global</th> \
 </tr>";
+        }
 
         return result;
     };
@@ -216,16 +243,25 @@ var Scoreboard = new function () {
         var result = " \
 <tr class=\"user\" data-user=\"" + user["key"] + "\"> \
     <td class=\"sel\"></td> \
-    <td class=\"rank\">" + user["rank"] + "</td> \
+    <td class=\"rank\">" + user["rank"] + "</td>";
+
+        if(Config.first_name_is_name){
+            result += " \
+    <td colspan=\"10\" class=\"f_name\">" + user["f_name"] + "</td>";
+        }else{
+            result += " \
     <td colspan=\"10\" class=\"f_name\">" + user["f_name"] + "</td> \
     <td colspan=\"10\" class=\"l_name\">" + user["l_name"] + "</td>";
+        }
 
-        if (user['team']) {
-            result += " \
+        if(Config.show_team){
+            if (user['team']) {
+                result += " \
     <td class=\"team\"><img src=\"" + Config.get_flag_url(user["team"]) + "\" title=\"" + DataStore.teams[user["team"]]["name"] + "\" /></td>";
-        } else {
-            result += " \
+            } else {
+                result += " \
     <td class=\"team\"></td>";
+            }
         }
 
         var contests = DataStore.contest_list;
@@ -245,10 +281,12 @@ var Scoreboard = new function () {
     <td colspan=\"4\" class=\"score contest " + score_class + "\" data-contest=\"" + c_id + "\" data-sort_key=\"c_" + c_id + "\">" + round_to_str(user["c_" + c_id], contest["score_precision"]) + "</td>";
         }
 
-        var score_class = self.get_score_class(user["global"], DataStore.global_max_score);
-        result += " \
+        if(contests.length != 1){
+            var score_class = self.get_score_class(user["global"], DataStore.global_max_score);
+            result += " \
     <td colspan=\"5\" class=\"score global " + score_class + "\" data-sort_key=\"global\">" + round_to_str(user["global"], DataStore.global_score_precision) + "</td> \
 </tr>";
+        }
 
         return result;
     };

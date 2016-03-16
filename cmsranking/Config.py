@@ -49,6 +49,10 @@ class Config(object):
         self.username = 'usern4me'
         self.password = 'passw0rd'
 
+        # UI stuff
+        self.show_team = True
+        self.first_name_is_name = False
+
         # Buffers
         self.buffer_size = 100  # Needs to be strictly positive.
 
@@ -91,6 +95,14 @@ class Config(object):
             pass  # We assume the directory already exists...
 
         self._load(paths)
+
+    def to_clientside(self):
+        """Pass configuration to clientside
+        """
+        return {
+            "show_team": self.show_team,
+            "first_name_is_name": self.first_name_is_name
+        }
 
     def get(self, key):
         """Get the config value for the given key.

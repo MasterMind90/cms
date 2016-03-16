@@ -72,5 +72,25 @@ var Config = new function () {
 
     self.get_history_url = function () {
         return "history";
-    }
+    };
+
+    self.show_team = true;
+    self.first_name_is_name = false;
+
+    self.fetch_config = function(callback){
+        $.ajax({
+            url: "config",
+            dataType: "json",
+            success: function (data, status, xhr) {
+                $.each(data, function(key, value){
+                    self[key] = value;
+                });
+                callback();
+            },
+            error: function () {
+                console.warn("Fail to fetch config from server");
+                callback();
+            }
+        });
+    };
 };
