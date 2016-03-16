@@ -214,7 +214,7 @@ Time Penalty : {{ details["time_penalty"] }}<br />
 
         if outcome <= 0.0:
             return N_("Not correct")
-        elif outcome >= self.parameters:
+        elif outcome >= 1.0:
             return N_("Correct")
         else:
             return N_("Partially correct")
