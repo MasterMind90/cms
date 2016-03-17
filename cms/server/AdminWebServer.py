@@ -2030,7 +2030,6 @@ _aws_handlers = [
     (r"/add_announcement/([0-9]+)", AddAnnouncementHandler),
     (r"/remove_announcement/([0-9]+)", RemoveAnnouncementHandler),
     (r"/contest/([0-9]+)/submissions/", SubmissionListViewHandler),
-    (r"/submission/([0-9]+)", ContestHandler),
     (r"/submission/([0-9]+)(?:/([0-9]+))?", SubmissionViewHandler),
     (r"/submission_file/([0-9]+)", SubmissionFileHandler),
     (r"/submission_comment/([0-9]+)(?:/([0-9]+))?", SubmissionCommentHandler),
