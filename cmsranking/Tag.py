@@ -25,16 +25,16 @@ import six
 
 from cmsranking.Entity import Entity, InvalidData
 from cmsranking.Store import Store
-from cmsranking.Submission import store as submission_store
+from cmsranking.User import store as user_store
 
 
-class User(Entity):
-    """The entity representing a user.
+class Tag(Entity):
+    """The entity representing a tag.
+    The structure is basically closed from team.
+    The tag is used to tag user with various tag such as "guess", or "newbie"
 
     It consists of the following properties:
-    - f_name (unicode): the first name of the user
-    - l_name (unicode): the last name of the user
-    - team (unicode): the id of the team the user belongs to
+    - name (unicode): the human-readable name of the team
 
     """
     def __init__(self):
@@ -42,10 +42,7 @@ class User(Entity):
 
         """
         Entity.__init__(self)
-        self.f_name = None
-        self.l_name = None
-        self.team = None
-        self.tags = []
+        self.name = None
 
     @staticmethod
     def validate(data):
@@ -57,13 +54,8 @@ class User(Entity):
         try:
             assert isinstance(data, dict), \
                 "Not a dictionary"
-            assert isinstance(data['f_name'], six.text_type), \
-                "Field 'f_name' isn't a string"
-            assert isinstance(data['l_name'], six.text_type), \
-                "Field 'l_name' isn't a string"
-            assert data['team'] is None or \
-                isinstance(data['team'], six.text_type), \
-                "Field 'team' isn't a string (or null)"
+            assert isinstance(data['name'], six.text_type), \
+                "Field 'name' isn't a string"
         except KeyError as exc:
             raise InvalidData("Field %s is missing" % exc.message)
         except AssertionError as exc:
@@ -71,20 +63,12 @@ class User(Entity):
 
     def set(self, data):
         self.validate(data)
-        self.f_name = data['f_name']
-        self.l_name = data['l_name']
-        self.team = data['team']
-        if 'tags' in data:
-            self.tags = data['tags']
+        self.name = data['name']
 
     def get(self):
         result = self.__dict__.copy()
         del result['key']
         return result
 
-    def consistent(self):
-        from cmsranking.Team import store as team_store
-        return self.team is None or self.team in team_store
 
-
-store = Store(User, 'users', [submission_store])
+store = Store(Tag, 'tags', [user_store])

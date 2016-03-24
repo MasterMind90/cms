@@ -375,6 +375,17 @@ abbr {
     width: 100%;
     table-layout: fixed;
     margin: 3em 0;
+    margin-top: 0;
+}
+
+#Tag_filters {
+    margin: 0;
+    margin-top: 3em;
+    text-align: right;
+}
+
+#Tag_filters > label {
+    margin-left: 1ex;
 }
 
 #Scoreboard_cols col.sel {
@@ -458,6 +469,16 @@ abbr {
 #Scoreboard_body tr.selected td.f_name,
 #Scoreboard_body tr.selected td.l_name {
     font-weight: bold;
+}
+
+#Scoreboard_body tr td.tag span.tag-item {
+    border: 1px solid #797979;#
+    border-radius: 2px;
+    display: inline-block;
+    margin-left: 1ex;
+    padding: 0.1ex 1ex;
+    line-height: 1.3em;
+    font-size: 70%;
 }
 
 /* What follows is the CSS needed to manage the "checkboxes" in the Scoreboard,

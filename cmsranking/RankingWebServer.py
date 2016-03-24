@@ -52,6 +52,7 @@ from cmsranking.Config import config
 from cmsranking.Entity import InvalidData
 import cmsranking.Contest as Contest
 import cmsranking.Task as Task
+import cmsranking.Tag as Tag
 import cmsranking.Team as Team
 import cmsranking.User as User
 import cmsranking.Submission as Submission
@@ -268,6 +269,13 @@ class DataWatcher(EventSource):
             functools.partial(self.callback, "team", "update"))
         Team.store.add_delete_callback(
             functools.partial(self.callback, "team", "delete"))
+
+        Tag.store.add_create_callback(
+            functools.partial(self.callback, "tag", "create"))
+        Tag.store.add_update_callback(
+            functools.partial(self.callback, "tag", "update"))
+        Tag.store.add_delete_callback(
+            functools.partial(self.callback, "tag", "delete"))
 
         User.store.add_create_callback(
             functools.partial(self.callback, "user", "create"))
@@ -489,6 +497,7 @@ def main():
         {'/contests': StoreHandler(Contest.store),
          '/tasks': StoreHandler(Task.store),
          '/teams': StoreHandler(Team.store),
+         '/tags': StoreHandler(Tag.store),
          '/users': StoreHandler(User.store),
          '/submissions': StoreHandler(Submission.store),
          '/subchanges': StoreHandler(Subchange.store),

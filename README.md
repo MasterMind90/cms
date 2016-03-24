@@ -39,6 +39,8 @@ Among the differences are:
   *Note: The sandbox works strangely with JVM. Using the default
   jvm_flags, it won't even run if the problem memory limit is set lower
   than 2GB.*
+- Tags support in the ranking web server and the scoreboard can be filtered
+  according to tag. For example 'guest' and 'local' flag.
 
 ACMICPCApproximate Score Type
 -----------------------------

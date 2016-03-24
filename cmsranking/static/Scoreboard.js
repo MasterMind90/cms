@@ -22,6 +22,7 @@ var Scoreboard = new function () {
         self.tcols_el = $('#Scoreboard_cols');
         self.thead_el = $('#Scoreboard_head');
         self.tbody_el = $('#Scoreboard_body');
+        self.tag_filter_el = $('#Tag_filters');
 
         self.generate();
 
@@ -36,6 +37,7 @@ var Scoreboard = new function () {
 
 
     self.generate = function () {
+        self.make_tag_filter_checkbox();
         self.tcols_el.html(self.make_cols());
         self.thead_el.html(self.make_head());
 
@@ -91,6 +93,40 @@ var Scoreboard = new function () {
         });
     };
 
+    self.make_tag_filter_checkbox = function(){
+      self.tag_filter_el.empty();
+      for(var tag_id in DataStore.tags){
+        var el = $("<label><input type=\"checkbox\" data-tag=\""+tag_id+"\" />"+DataStore.tags[tag_id].name+"</label>");
+        el.change(self.filter_users);
+        self.tag_filter_el.append(el);
+      }
+    }
+
+    self.filter_users = function(){
+      var tag_filters = [];
+
+      self.tag_filter_el.find("[type=checkbox]").each(function(){
+        if($(this).attr("checked")){
+          tag_filters.push($(this).data("tag"));
+        }
+      });
+
+      for(id in self.user_list){
+        var can = true;
+        for(tid in tag_filters){
+          var tag = tag_filters[tid];
+          if(self.user_list[id].tags.indexOf(tag) == -1){
+            can = false;
+          }
+        }
+
+        if(can){
+          $(self.user_list[id].row).css("display", "table-row");
+        }else{
+          $(self.user_list[id].row).css("display", "none");
+        }
+      }
+    }
 
     self.make_cols = function () {
         // We want some columns to have a fixed, constant width at all screen
@@ -150,6 +186,10 @@ var Scoreboard = new function () {
             result += "<col class=\"team\"/>";
         }
 
+        if(DataStore.tag_count > 0){
+            result += "<col class=\"tag\"/><col /><col />";
+        }
+
         var contests = DataStore.contest_list;
         for (var i in contests) {
             var contest = contests[i];
@@ -198,6 +238,11 @@ var Scoreboard = new function () {
             result += " \
     <th class=\"team\">Team</th>";
         }
+
+        if(DataStore.tag_count > 0){
+            result += "<th colspan=\"3\" class=\"tag\" >Tags</th>";
+        }
+
 
         var contests = DataStore.contest_list;
         for (var i in contests) {
@@ -262,6 +307,19 @@ var Scoreboard = new function () {
                 result += " \
     <td class=\"team\"></td>";
             }
+        }
+
+        if(DataStore.tag_count > 0){
+            var thetd = "<td colspan=\"3\" class=\"tag\">";
+            $.each(user["tags"], function(){
+              if(DataStore.tags[this] === undefined){
+                console.warn("Tag "+this+" is not defined");
+              }else{
+                thetd += "<span class=\"tag-item\">"+DataStore.tags[this].name+"</span>";
+              }
+            });
+            thetd += "</td>";
+            result += thetd;
         }
 
         var contests = DataStore.contest_list;
