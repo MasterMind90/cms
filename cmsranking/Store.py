@@ -185,12 +185,14 @@ class Store(object):
 
         # update entity
         with LOCK:
+            old_item = self._store[key]
             item = self._entity()
+            # Some data may be missing from ProxyService. Dont remove
+            item.set(old_item.get())
             item.set(data)
             if not item.consistent():
                 raise InvalidData("Inconsistent data")
             item.key = key
-            old_item = self._store[key]
             self._store[key] = item
             # notify callbacks
             for callback in self._update_callbacks:
@@ -229,6 +231,9 @@ class Store(object):
                     if not re.match('[A-Za-z0-9_]+', key):
                         raise InvalidData("Invalid key")
                     item = self._entity()
+                    # Some data may be missing from ProxyService. Dont remove
+                    if key in self._store:
+                        item.set(self._store[key].get())
                     item.set(value)
                     if not item.consistent():
                         raise InvalidData("Inconsistent data")
