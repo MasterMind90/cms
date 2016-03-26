@@ -260,6 +260,10 @@ class Batch(TaskType):
             stdin_redirect=stdin_redirect,
             stdout_redirect=stdout_redirect)
 
+        # Populate this as we need this to fill Evaluation
+        plus["stdout"] = sandbox.get_file_to_string(stdout_redirect)
+        plus["stderr"] = sandbox.get_file_to_string("stderr.txt")
+
         job.sandboxes = [sandbox.path]
         job.plus = plus
 

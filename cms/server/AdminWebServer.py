@@ -51,7 +51,7 @@ from cms import config, ServiceCoord, get_service_shards, get_service_address
 from cms.io import WebService
 from cms.db import Session, Contest, User, Announcement, Question, Message, \
     Submission, File, Task, Dataset, Attachment, Manager, Testcase, \
-    SubmissionFormatElement, Statement
+    SubmissionFormatElement, Statement, Evaluation
 from cms.db.filecacher import FileCacher
 from cms.grading import compute_changes_for_dataset
 from cms.grading.tasktypes import get_task_type_class
@@ -1839,6 +1839,34 @@ class SubmissionFileHandler(FileHandler):
         self.fetch(digest, "text/plain", real_filename)
 
 
+class EvaluationStdoutHandler(FileHandler):
+    """Shows an evaluation's stdout
+
+    """
+    def get(self, evaluation_id):
+        evaluation = self.safe_get_item(Evaluation, evaluation_id)
+        if evaluation.stdout != None:
+            self.set_header("Content-Type", 'text/plain')
+            self.set_header("Content-Disposition", "attachment; filename=output.txt")
+            self.write(evaluation.stdout)
+        else:
+            raise tornado.web.HTTPError(404)
+
+
+class EvaluationStderrHandler(FileHandler):
+    """Shows an evaluation's stderr
+
+    """
+    def get(self, evaluation_id):
+        evaluation = self.safe_get_item(Evaluation, evaluation_id)
+        if evaluation.stdout != None:
+            self.set_header("Content-Type", 'text/plain')
+            self.set_header("Content-Disposition", "attachment; filename=error.txt")
+            self.write(evaluation.stderr)
+        else:
+            raise tornado.web.HTTPError(404)
+
+
 class SubmissionCommentHandler(BaseHandler):
     """Called when the admin comments on a submission.
 
@@ -2031,6 +2059,8 @@ _aws_handlers = [
     (r"/remove_announcement/([0-9]+)", RemoveAnnouncementHandler),
     (r"/contest/([0-9]+)/submissions/", SubmissionListViewHandler),
     (r"/submission/([0-9]+)(?:/([0-9]+))?", SubmissionViewHandler),
+    (r"/stdout/([0-9]+)?", EvaluationStdoutHandler),
+    (r"/stderr/([0-9]+)?", EvaluationStderrHandler),
     (r"/submission_file/([0-9]+)", SubmissionFileHandler),
     (r"/submission_comment/([0-9]+)(?:/([0-9]+))?", SubmissionCommentHandler),
     (r"/file/([a-f0-9]+)/([a-zA-Z0-9_.-]+)", FileFromDigestHandler),

@@ -41,6 +41,8 @@ Among the differences are:
   than 2GB.*
 - Tags support in the ranking web server and the scoreboard can be filtered
   according to tag. For example 'guest' and 'local' flag.
+- It now record stderr and stdout of an evaluation. Available in
+  AdminWebServer
 
 ACMICPCApproximate Score Type
 -----------------------------

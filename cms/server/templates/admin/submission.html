@@ -153,6 +153,8 @@
         <th>Shard</th>
         <th>Resources</th>
         <th>Sandbox</th>
+        <th>Stdout</th>
+        <th>Stderr</th>
       </tr>
     </thead>
     <tbody>
@@ -179,6 +181,8 @@
           {% end %}
         </td>
         <td>{{ ev.evaluation_sandbox }}</td>
+        <td><a href="{{ url_root }}/stdout/{{ ev.id }}">Raw</a></td>
+        <td><a href="{{ url_root }}/stderr/{{ ev.id }}">Raw</a></td>
       </tr>
       {% end %}
     </tbody>
