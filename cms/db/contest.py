@@ -32,7 +32,7 @@ from __future__ import unicode_literals
 from datetime import datetime, timedelta
 
 from sqlalchemy.schema import Column, ForeignKey, CheckConstraint
-from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum
+from sqlalchemy.types import Integer, Unicode, DateTime, Interval, Enum, Boolean
 from sqlalchemy.orm import relationship, backref
 
 from . import Base, RepeatedUnicode
@@ -147,6 +147,12 @@ class Contest(Base):
         DateTime,
         nullable=False,
         default=datetime(2100, 01, 01))
+
+    # Used to mark unfreeze so that the freeze_time information is not lost
+    unfreeze = Column(
+        Boolean,
+        nullable=False,
+        default=False)
 
     # Timezone for the contest. All timestamps in CWS will be shown
     # using the timezone associated to the logged-in user or (if it's
