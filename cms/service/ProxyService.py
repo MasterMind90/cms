@@ -528,7 +528,9 @@ class ProxyService(TriggeredService):
         """
         self.reinitialize();
         with SessionGen() as session:
-            for submission in session.query(Submission).all():
+            contest = Contest.get_from_id(self.contest_id, session)
+            for submission in session.query(Submission).join(Task) \
+                .filter(Task.contest == contest).all():
                 # Update RWS.
                 if not submission.user.hidden and \
                         submission.get_result() is not None and \
