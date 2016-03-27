@@ -158,6 +158,7 @@ def do_setup():
                   "cmsContestImporter=cmscontrib.ContestImporter:main",
                   "cmsDumpUpdater=cmscontrib.DumpUpdater:main",
                   "cmsRWSHelper=cmscontrib.RWSHelper:main",
+                  "cmsGenerateEventFeed=cmscontrib.GenerateEventFeed:main",
 
                   "cmsMake=cmstaskenv.cmsMake:main",
 
