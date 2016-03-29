@@ -58,7 +58,17 @@ update_submission_row = function (submission_id, data) {
             }
             row.children("td.total_score").removeClass("undefined").html(score);
         }
-    } else if (data["status"] != 2) {
+        if (data["verdict"] !== undefined) {
+            var score_class = "score_0"
+            if(data["verdict"] == "Accepted"){
+                score_class = "score_100";
+            }
+            row.children("td.total_score,td.public_score")
+              .removeClass("undefined")
+              .addClass(score_class)
+              .html(data["verdict"]);
+        }
+    } else if (data["status"] != 2 || data["status"] != 5) {
         schedule_update_submission_row(submission_id);
     }
 }
@@ -71,9 +81,20 @@ schedule_update_submission_row = function (submission_id) {
     }, 2000);
 }
 
+fetch_update_submission_row = function (submission_id){
+    $.get("{{ url_root }}/tasks/{{ encode_for_url(task.name) }}/submissions/" + submission_id, function (data) {
+        update_submission_row(submission_id, data);
+    });
+}
+
 $(document).ready(function () {
     $('#submission_list tbody tr[data-status][data-status!="2"][data-status!="5"]').each(function (idx, elem) {
         schedule_update_submission_row($(this).attr("data-submission"));
+    });
+
+    // Make sure it update. No need to duplicate rendering in submission_row.html
+    $('#submission_list tbody tr[data-status]').each(function (idx, elem) {
+        fetch_update_submission_row($(this).attr("data-submission"));
     });
 });
 

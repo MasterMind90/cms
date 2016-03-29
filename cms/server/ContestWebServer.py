@@ -1309,6 +1309,14 @@ class SubmissionStatusHandler(BaseHandler):
                     round(score_type.max_public_score, task.score_precision)
             data["public_score"] = "%g" % \
                 round(sr.public_score, task.score_precision)
+
+            logger.info("Score type %s "%task.active_dataset.score_type)    
+            if task.active_dataset.score_type == "ACMICPCApproximate":
+                if sr.score > 0:
+                    data["verdict"] = "Accepted"
+                else:
+                    data["verdict"] = "Not Accepted"
+
             if submission.token is not None:
                 if score_type is not None and score_type.max_score != 0:
                     data["max_score"] = "%g" % \
