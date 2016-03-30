@@ -220,6 +220,11 @@ abbr {
     top: 280px;
 }
 
+#TimeView .freeze_notice{
+    color: red;
+    margin-left: auto;
+    margin-right: auto;
+}
 
 /******************************************************************************\
 |                                                                              |

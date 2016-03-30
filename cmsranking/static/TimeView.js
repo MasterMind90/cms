@@ -63,6 +63,12 @@ var TimeView = new function () {
             $("#TimeView_selector").removeClass("open");
         });
 
+        $("#TimeView_selector_freeze").click(function () {
+            self.status = 3;
+            self.on_timer();
+            $("#TimeView_selector").removeClass("open");
+        });
+
         $("#TimeView_expand").click(function () {
             $("#TimeView_selector").toggleClass("open");
         });
@@ -94,7 +100,18 @@ var TimeView = new function () {
         if (c == null) {
             $("#TimeView_name").text();
         } else {
-            $("#TimeView_name").text(c["name"]);
+            if(cur_time > c['freeze_time']){
+                var textplace = $("<span>");
+                textplace.text(c["name"]);
+                var frozen = $("<div class='freeze_notice'>");
+                frozen.text("(Frozen)")
+                $("#TimeView_name").empty();
+                $("#TimeView_name").append(textplace);
+                $("#TimeView_name").append(frozen);
+            }else{
+                $("#TimeView_name").text(c["name"]);
+            }
+
         }
 
         var date = new Date(cur_time * 1000);
@@ -130,6 +147,10 @@ var TimeView = new function () {
                     $("#TimeView").removeClass("elapsed remaining");
                     $("#TimeView").addClass("current");
                     full_time = true;
+                } else if (self.status == 3) {
+                    $("#TimeView").removeClass("elapsed current");
+                    $("#TimeView").addClass("remaining");
+                    time = cur_time - c['freeze_time'];
                 } else if (self.status == 1) {
                     $("#TimeView").removeClass("elapsed current");
                     $("#TimeView").addClass("remaining");
