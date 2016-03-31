@@ -100,7 +100,7 @@ var TimeView = new function () {
         if (c == null) {
             $("#TimeView_name").text();
         } else {
-            if(cur_time > c['freeze_time']){
+            if(cur_time > c['freeze_time'] && !c['unfreeze']){
                 var textplace = $("<span>");
                 textplace.text(c["name"]);
                 var frozen = $("<div class='freeze_notice'>");
@@ -131,11 +131,11 @@ var TimeView = new function () {
                 $("#TimeView").removeClass("cont post_cont");
                 $("#TimeView").addClass("pre_cont");
                 if (self.status == 2) {
-                    $("#TimeView").removeClass("elapsed remaining");
+                    $("#TimeView").removeClass("elapsed remaining current freeze");
                     $("#TimeView").addClass("current");
                     full_time = true;
                 } else {
-                    $("#TimeView").removeClass("elapsed current");
+                    $("#TimeView").removeClass("elapsed remaining current freeze");
                     $("#TimeView").addClass("remaining");
                     time = cur_time - c['begin'];
                 }
@@ -144,19 +144,19 @@ var TimeView = new function () {
                 $("#TimeView").removeClass("pre_cont post_cont");
                 $("#TimeView").addClass("cont");
                 if (self.status == 2) {
-                    $("#TimeView").removeClass("elapsed remaining");
+                    $("#TimeView").removeClass("elapsed remaining current freeze");
                     $("#TimeView").addClass("current");
                     full_time = true;
                 } else if (self.status == 3) {
-                    $("#TimeView").removeClass("elapsed current");
-                    $("#TimeView").addClass("remaining");
+                    $("#TimeView").removeClass("elapsed remaining current freeze");
+                    $("#TimeView").addClass("freeze");
                     time = cur_time - c['freeze_time'];
                 } else if (self.status == 1) {
-                    $("#TimeView").removeClass("elapsed current");
+                    $("#TimeView").removeClass("elapsed remaining current freeze");
                     $("#TimeView").addClass("remaining");
                     time = cur_time - c['end'];
                 } else {
-                    $("#TimeView").removeClass("remaining current");
+                    $("#TimeView").removeClass("elapsed remaining current freeze");
                     $("#TimeView").addClass("elapsed");
                     time = cur_time - c['begin'];
                 }

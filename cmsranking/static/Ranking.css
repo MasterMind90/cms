@@ -183,6 +183,7 @@ abbr {
 
 #TimeView_selector_elapsed,
 #TimeView_selector_remaining,
+#TimeView_selector_freeze,
 #TimeView_selector_current {
     padding: 2px 4px;
     font-size: 0.875em;
@@ -199,6 +200,7 @@ abbr {
 
 #TimeView.elapsed #TimeView_selector_elapsed,
 #TimeView.remaining #TimeView_selector_remaining,
+#TimeView.freeze #TimeView_selector_freeze,
 #TimeView.current #TimeView_selector_current {
     background-color: #F2F2F3;
     color: #000000;
