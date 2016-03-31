@@ -325,6 +325,7 @@ class ProxyService(TriggeredService):
                 "begin": int(make_timestamp(contest.start)),
                 "end": int(make_timestamp(contest.stop)),
                 "freeze_time": int(make_timestamp(contest.freeze_time)),
+                "unfreeze": contest.unfreeze,
                 "score_precision": contest.score_precision}
 
             users = dict()
@@ -390,7 +391,7 @@ class ProxyService(TriggeredService):
                 contest = submission.task.contest
                 score_to_send = submission_result.score
 
-                if submission.timestamp > contest.freeze_time and score_to_send != 0.0:
+                if submission.timestamp > contest.freeze_time and (not contest.unfreeze) and score_to_send != 0.0:
 
                     previous_score = session.query(func.max(SubmissionResult.score)) \
                         .join(Submission) \

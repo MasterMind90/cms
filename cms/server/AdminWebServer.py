@@ -680,6 +680,7 @@ class ContestHandler(BaseHandler):
             self.get_datetime(attrs, "start")
             self.get_datetime(attrs, "stop")
             self.get_datetime(attrs, "freeze_time")
+            self.get_bool(attrs, "unfreeze")
 
             self.get_string(attrs, "timezone", empty=None)
             self.get_timedelta_sec(attrs, "per_user_time")

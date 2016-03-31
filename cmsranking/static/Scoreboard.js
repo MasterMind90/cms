@@ -359,8 +359,9 @@ var Scoreboard = new function () {
         }
 
         var score_class = self.get_score_class(user["t_" + t_id], task["max_score"]);
+        var after_freeze = contest.freeze_time < submission_time;
 
-        if(contest.freeze_time < submission_time){
+        if(after_freeze && !contest.unfreeze){
             result += " \
             <td colspan=\"3\" class=\"score task score_froze\" data-task=\"" + t_id + "\" data-sort_key=\"t_" + t_id + "\">?</td>";
         }else if(task.score_type == "ACMICPCApproximate"){

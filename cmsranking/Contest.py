@@ -46,6 +46,8 @@ class Contest(Entity):
         self.name = None
         self.begin = None
         self.end = None
+        self.freeze_time = None
+        self.unfreeze = False
         self.score_precision = None
 
     @staticmethod
@@ -80,6 +82,8 @@ class Contest(Entity):
         self.name = data['name']
         self.begin = data['begin']
         self.freeze_time = data['freeze_time']
+        if 'unfreeze' in data: # For easy migration 
+            self.unfreeze = data['unfreeze']
         self.end = data['end']
         self.score_precision = data['score_precision']
 
