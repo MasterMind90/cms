@@ -77,11 +77,13 @@ def main():
         if "first_name" not in obj["users"][key]:
             obj["users"][key]["first_name"] = obj["users"][key]["name"]
         if "last_name" not in obj["users"][key]:
-            obj["users"][key]["last_name"] = "" 
+            obj["users"][key]["last_name"] = ""
         obj["users"][key]["f_name"] = obj["users"][key]["first_name"]
         obj["users"][key]["l_name"] = obj["users"][key]["last_name"]
         if "team" not in obj["users"][key]:
             obj["users"][key]["team"] = None
+        if "tags" not in obj["users"][key]:
+            obj["users"][key]["tags"] = [] 
 
     with SessionGen() as session:
         contest = Contest.get_from_id(args.contest_id, session)
