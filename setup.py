@@ -159,6 +159,7 @@ def do_setup():
                   "cmsDumpUpdater=cmscontrib.DumpUpdater:main",
                   "cmsRWSHelper=cmscontrib.RWSHelper:main",
                   "cmsExportSummary=cmscontrib.ExportSummary:main",
+                  "cmsJsonUserImporter=cmscontrib.JsonUserImporter:main",
 
                   "cmsMake=cmstaskenv.cmsMake:main",
 
