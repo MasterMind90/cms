@@ -40,6 +40,12 @@ abbr {
     top: 24px;
     left: 24px;
     width: 200px;
+    text-align: center; 
+}
+
+#LogoPanel img{
+    max-width: 200px;
+    max-height: 180px;
 }
 
 #UpperPanel {
