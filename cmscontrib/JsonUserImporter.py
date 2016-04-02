@@ -39,23 +39,6 @@ from cmsranking import Tag as RankingTag
 from cmsranking import User as RankingUser
 from cms.db import SessionGen, User, Contest, ask_for_contest
 
-
-def add_user(contest_id, first_name, last_name, username,
-             password, ip_address, email, hidden):
-    with SessionGen() as session:
-        contest = Contest.get_from_id(contest_id, session)
-        user = User(first_name=first_name,
-                    last_name=last_name,
-                    username=username,
-                    password=password,
-                    email=email,
-                    ip=ip_address,
-                    hidden=hidden,
-                    contest=contest)
-        session.add(user)
-        session.commit()
-
-
 def main():
     """Parse arguments and launch process.
 
@@ -83,7 +66,7 @@ def main():
         if "team" not in obj["users"][key]:
             obj["users"][key]["team"] = None
         if "tags" not in obj["users"][key]:
-            obj["users"][key]["tags"] = [] 
+            obj["users"][key]["tags"] = []
 
     with SessionGen() as session:
         contest = Contest.get_from_id(args.contest_id, session)
@@ -107,10 +90,10 @@ def main():
                             username=username,
                             password=userob.get("password", ""),
                             email=userob.get("email", ""),
-                            ip=userob.get("ip", ""),
+                            ip=userob.get("ip", None),
                             hidden=userob.get("hidden", False),
                             contest=contest)
-            session.add(user)
+                session.add(user)
             session.commit()
 
     print("Adding to ranking server")
