@@ -163,6 +163,7 @@ Time Penalty : {{ details["time_penalty"] }}<br />
             before_count = session.query(Submission).join(SubmissionResult) \
                 .filter(Submission.timestamp < submission_result.submission.timestamp) \
                 .filter(Submission.task_id == submission_result.submission.task_id) \
+                .filter(Submission.user == submission_result.submission.user) \
                 .filter(SubmissionResult.score == 0) \
                 .count()
             if has_wrong: # This own submission is a wrong attempt
