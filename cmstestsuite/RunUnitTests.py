@@ -54,7 +54,7 @@ def run_unittests(test_list):
             i + 1, num_tests_to_execute,
             path, filename))
         try:
-            sh('python-coverage run -p --source=cms %s' %
+            sh('python2 -m coverage run -p --source=cms %s' %
                os.path.join(path, filename))
         except FrameworkException:
             info("  (FAILED: %s)" % filename)
@@ -157,6 +157,7 @@ def main():
     args = parser.parse_args()
 
     CONFIG["VERBOSITY"] = args.verbose
+    CONFIG["COVERAGE"] = True
 
     start_time = datetime.datetime.now()
 
@@ -194,7 +195,7 @@ def main():
 
         # Clear out any old coverage data.
         info("Clearing old coverage data.")
-        sh("python-coverage erase")
+        sh("python -m coverage erase")
 
     # Run all of our test cases.
     passed, test_results = run_unittests(test_list)

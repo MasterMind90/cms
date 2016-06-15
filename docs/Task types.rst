@@ -41,6 +41,8 @@ If the output is compared with a diff, the outcome will be a float, 0.0 if the o
 - writes on standard output the outcome (that is going to be used by the score type, and is usually a float between 0.0 and 1.0);
 - writes on standard error a message to forward to the contestant.
 
+.. note:: The checker can also print the special strings "translate:success", "translate:wrong" or "translate:partial", which will be respectively shown to the contestants as the localized messages for "Output is correct", "Output isn't correct", and "Output is partially correct".
+
 The submission format must contain one filename ending with ``.%l``. If there are additional files, the contestants are forced to submit them, the admins can inspect them, but they are not used towards the evaluation.
 
 Batch tasks are supported also for Java, with some requirements. The solutions of the contestants must contain a class named like the short name of the task. A grader must have a class named ``grader`` that in turns contains the main method; whether in this case the contestants should write a static method or a class is up to the admins.
@@ -67,11 +69,13 @@ Communication
 
 In a Communication task, a contestant must submit a source file implementing a function, similarly to what happens for a Batch task. The difference is that the admins must provide both a stub, that is a source file that is compiled together with the contestant's source, and a manager, that is an executable.
 
-The two programs communicate through two fifo files. The manager receives the name of the two fifos as its arguments. It is supposed to read from standard input the input of the testcase, and to start communicating some data to the other program through the fifo. The two programs exchange data through the fifo, until the manager is able to assign an outcome to the evaluation. The manager then writes to standard output the outcome and to standard error the message to the user.
+For usual reactive tasks, ``num_processes`` is set to ``1``. In that case, the two programs communicate through two fifo files. The manager receives the name of the two fifos as its arguments. It is supposed to read from standard input the input of the testcase, and to start communicating some data to the other program through the fifo. The two programs exchange data through the fifo, until the manager is able to assign an outcome to the evaluation. The manager then writes to standard output the outcome and to standard error the message to the user, similarly to the what the checker does for a Batch task.
+
+When ``num_processes`` is greater than ``1``, multiple instances of the submitted program are executed. ``2 * num_processes`` fifos are given to the manager, and two of them are given to each instance of the submitted program. An additional number is given to the submitted program to distinguish the processes. Two instances of the submitted program can't communicate directly. Time and memory consumed are calculated by summation.
 
 If the program linked to the user-provided file fails (for a timeout, or for a non-allowed syscall), the outcome is 0.0 and the message describes the problem to the user.
 
-The submission format must contain one filename ending with ``.%l``. If there are additional files, the contestants are forced to submit them, the admins can inspect them, but they are not used towards the evaluation.
+The submission format must contain one or more filenames ending with ``.%l``. Multiple source files are simply linked together. Usually the number of files to submit is equal to ``num_processes``.
 
 
 TwoSteps
@@ -81,8 +85,10 @@ Warning: use this task type only if you know what are you doing.
 
 In a TwoSteps task, contestants submit two source files implementing a function each (the idea is that the first function gets the input and compute some data from it with some restriction, and the second tries to retrieve the original data).
 
-The admins must provide a manager compiled together with both files. The resulting executable is run twice (one acting as the computer, one acting as the retriever. The manager in the computer executable must take care of reading the input from standard input; the one in the retriever executable of writing the outcome and the explanation message to standard output and error respectively. Both must take responsibility of the communication between them through a pipe.
+The admins must provide a manager, which is compiled together with both of the contestant-submitted files. The manager needs to be named :file:`manager.ext`, where ``ext`` is the standard extension of a source file in that language. Furthermore, for C/C++ and Pascal, appropriate header files for the two source files given by the contestants need to be provided, as well as manager header files (:file:`manager.h`, :file:`managerlib.pas`)---**even if they are empty**.
 
-More precisely, the executable are called with two arguments: the first is an integer which is 0 if the executable is the computer, and 1 if it is the retriever; the second is the name of the pipe to be used for communication between the processes.
+The resulting executable is run twice (one acting as the computer, one acting as the retriever). The manager in the computer executable must take care of reading the input from standard input; the one in the retriever executable of writing the retrieved data to standard output. Both must take responsibility of the communication between them through a pipe.
 
+More precisely, the executable is called with two arguments: the first is an integer which is 0 if the executable is the computer, and 1 if it is the retriever; the second is the name of the pipe to be used for communication between the processes.
 
+Normally, the standard output of the second invocation of the manager is compared to a provided reference output file using the white-diff comparator. However, the admins may provide a :file:`checker` executable, with the same properties as for Batch. If a file with such a name is found in the uploaded manager files, it will be run instead of the white-diff comparator.

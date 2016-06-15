@@ -22,7 +22,10 @@
         "ScoringService":    [["localhost", 28500]],
         "Checker":           [["localhost", 22000]],
         "EvaluationService": [["localhost", 25000]],
-        "Worker":            [["localhost", 26000], ["localhost", 26001]],
+        "Worker":            [["localhost", 26000],
+                              ["localhost", 26001],
+                              ["localhost", 26002],
+                              ["localhost", 26003]],
         "ContestWebServer":  [["localhost", 21000]],
         "AdminWebServer":    [["localhost", 21100]],
         "ProxyService":      [["localhost", 28600]],
@@ -72,7 +75,8 @@
     "_help": "by the user, namely cookies and auto-incremented",
     "_help": "numbers. It should be changed for each",
     "_help": "contest. Particularly, you should not use this example",
-    "_help": "for other than testing. You can easily create a key",
+    "_help": "for other than testing. It must be a 16 bytes long",
+    "_help": "hexadecimal number. You can easily create a key",
     "_help": "calling cmscommon.crypto.get_hex_random_key().",
     "secret_key":             "8e045a51e4b102ea803c06f92841a1fb",
 
@@ -99,14 +103,6 @@
     "submit_local_copy":      true,
     "submit_local_copy_path": "%s/submissions/",
 
-    "_help": "If we allow users to log in only from their specified IP",
-    "_help": "address. Users with no IP set are anyway allowed to log in",
-    "_help": "from anywhere.",
-    "ip_lock": true,
-
-    "_help": "Whether hidden users are allowed to log in.",
-    "block_hidden_users": false,
-
     "_help": "Whether the CWSs are behind a (trusted) proxy (e.g.,",
     "_help": "nginx) that does load balancing. Used to know if it is",
     "_help": "safe to assume that the real source IP address is the",
@@ -122,9 +118,6 @@
     "_help": "STL documentation path in the system (exposed in CWS).",
     "stl_path": "/usr/share/doc/stl-manual/html/",
 
-    "_help": "Whether questions and messages are enabled.",
-    "allow_questions": true,
-
 
 
     "_section": "AdminWebServer",
@@ -134,6 +127,10 @@
     "_help": "127.0.0.1 here for additional security.",
     "admin_listen_address": "",
     "admin_listen_port":    8889,
+
+    "_help": "Login cookie duration for admins in seconds.",
+    "_help": "The duration is refreshed on every manual request.",
+    "admin_cookie_duration": 36000,
 
 
 

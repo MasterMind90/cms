@@ -3,8 +3,9 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2014 Luca Versari <veluca93@gmail.com>
 # Copyright © 2014 William Di Luigi <williamdiluigi@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -37,9 +38,10 @@ import subprocess
 import time
 from urlparse import urlsplit
 
-import cmstestsuite.web
-from cmstestsuite.web.CWSRequests import LoginRequest, SubmitRequest
-from cmstestsuite.web.AWSRequests import AWSSubmissionViewRequest
+from cmstestsuite.web import browser_do_request
+from cmstestsuite.web.AWSRequests import \
+    AWSLoginRequest, AWSSubmissionViewRequest
+from cmstestsuite.web.CWSRequests import CWSLoginRequest, SubmitRequest
 
 
 # CONFIG is populated by our test script.
@@ -47,23 +49,58 @@ CONFIG = {
     'VERBOSITY': 0,
 }
 
+
 # cms_config holds the decoded-JSON of the cms.conf configuration file.
-global cms_config
 cms_config = None
+
 
 # We store a list of all services that are running so that we can cleanly shut
 # them down.
-global running_services
 running_services = {}
-
-global running_servers
 running_servers = {}
 
-global created_users
-created_users = {}
 
-global created_tasks
+# List of users and tasks we created as part of the test.
+created_users = {}
 created_tasks = {}
+
+
+# Information on the administrator running the tests.
+admin_info = {}
+
+
+# Base URLs for AWS and CWS
+AWS_BASE_URL = "http://localhost:8889/"
+CWS_BASE_URL = "http://localhost:8888/"
+
+
+# Persistent browsers to access AWS and CWS.
+aws_browser = None
+cws_browser = None
+
+
+def get_aws_browser():
+    global aws_browser
+    if aws_browser is None:
+        aws_browser = mechanize.Browser()
+        aws_browser.set_handle_robots(False)
+        AWSLoginRequest(aws_browser,
+                        admin_info["username"], admin_info["password"],
+                        base_url=AWS_BASE_URL).execute()
+    return aws_browser
+
+
+def get_cws_browser(user_id):
+    global cws_browser
+    if cws_browser is None:
+        cws_browser = mechanize.Browser()
+        cws_browser.set_handle_robots(False)
+        cws_browser.set_handle_redirect(False)
+        username = created_users[user_id]['username']
+        password = created_users[user_id]['password']
+        CWSLoginRequest(
+            cws_browser, username, password, base_url=CWS_BASE_URL).execute()
+    return cws_browser
 
 
 class FrameworkException(Exception):
@@ -158,8 +195,8 @@ def spawn(cmdline):
     if CONFIG["VERBOSITY"] >= 1:
         print('$', ' '.join(cmdline))
 
-    if CONFIG["TEST_DIR"] is not None:
-        cmdline = ['python-coverage', 'run', '-p', '--source=cms'] + \
+    if CONFIG["TEST_DIR"] is not None and CONFIG.get("COVERAGE"):
+        cmdline = ['python', '-m', 'coverage', 'run', '-p', '--source=cms'] + \
             cmdline
 
     if CONFIG["VERBOSITY"] >= 3:
@@ -346,36 +383,46 @@ def shutdown_services():
 
 def combine_coverage():
     info("Combining coverage results.")
-    sh("python-coverage combine")
+    sh("python -m coverage combine")
+
+
+def initialize_aws(rand):
+    """Create an admin and logs in
+
+    rand (int): some random bit to add to the admin username.
+
+    """
+    info("Creating admin...")
+    admin_info["username"] = "admin%s" % rand
+    admin_info["password"] = "adminpwd"
+    sh("python cmscontrib/AddAdmin.py %(username)s -p %(password)s"
+       % admin_info)
 
 
 def admin_req(path, multipart_post=False, args=None, files=None):
-    url = 'http://localhost:8889' + path
-    br = mechanize.Browser()
-    br.set_handle_robots(False)
-
     # Some requests must be forced to be multipart.
     # Do this by making files not None.
     if multipart_post and files is None:
         files = []
 
-    return cmstestsuite.web.browser_do_request(br, url, args, files)
+    browser = get_aws_browser()
+    return browser_do_request(browser, AWS_BASE_URL + path, args, files)
 
 
-def get_tasks(contest_id):
+def get_tasks():
     '''Return a list of existing tasks, returned as a dictionary of
       'taskname' => { 'id': ..., 'title': ... }
 
     '''
-    r = admin_req('/tasklist/%d' % contest_id)
+    r = admin_req('tasks')
     groups = re.findall(r'''
-        <tr> \s*
-        <td> \s* (.*) \s* </td> \s*
-        <td><a\s+href="../task/(\d+)">(.*)</a></td>
+        <tr>\s*
+        <td><a\s+href="./task/(\d+)">(.*)</a></td>\s*
+        <td>(.*)</td>\s*
         ''', r.read(), re.X)
     tasks = {}
     for g in groups:
-        title, id, name = g
+        id, name, title = g
         id = int(id)
         tasks[name] = {
             'title': title,
@@ -390,13 +437,13 @@ def get_users(contest_id):
       'username' => { 'id': ..., 'firstname': ..., 'lastname': ... }
 
     '''
-    r = admin_req('/userlist/%d' % contest_id)
+    r = admin_req('contest/' + str(contest_id) + '/users')
     groups = re.findall(r'''
         <tr> \s*
         <td> \s* (.*) \s* </td> \s*
         <td> \s* (.*) \s* </td> \s*
-        <td><a\s+href="../user/(\d+)">(.*)</a></td>
-        ''', r.read(), re.X)
+        <td><a\s+href="./user/(\d+)">(.*)</a></td>
+    ''', r.read(), re.X)
     users = {}
     for g in groups:
         firstname, lastname, id, username = g
@@ -411,33 +458,56 @@ def get_users(contest_id):
 
 
 def add_contest(**kwargs):
-    resp = admin_req('/contest/add', multipart_post=True, args=kwargs)
+    add_args = {
+        "name": kwargs.get('name'),
+        "description": kwargs.get('description'),
+    }
+    resp = admin_req('contests/add', multipart_post=True, args=add_args)
     # Contest ID is returned as HTTP response.
     page = resp.read()
     match = re.search(
         r'<form enctype="multipart/form-data" action="../contest/([0-9]+)" '
         'method="POST" name="edit_contest">',
         page)
-    if match is None:
+    if match is not None:
+        contest_id = int(match.groups()[0])
+        admin_req('contest/%s' % contest_id, multipart_post=True, args=kwargs)
+        return contest_id
+    else:
         raise FrameworkException("Unable to create contest.")
-    return int(match.groups()[0])
 
 
-def add_task(contest_id, **kwargs):
-    # We need to specify token_mode. Why this and no others?
-    if 'token_mode' not in kwargs:
-        kwargs['token_mode'] = 'disabled'
-
-    r = admin_req('/add_task/%d' % contest_id,
-                  multipart_post=True,
-                  args=kwargs)
-    g = re.search(r'/task/([0-9]+)$', r.geturl())
-    if g:
-        task_id = int(g.group(1))
+def add_task(**kwargs):
+    add_args = {
+        "name": kwargs.get('name'),
+        "title": kwargs.get('title'),
+    }
+    r = admin_req('tasks/add', multipart_post=True, args=add_args)
+    response = r.read()
+    match_task_id = re.search(r'/task/([0-9]+)$', r.geturl())
+    match_dataset_id = re.search(r'/dataset/([0-9]+)', response)
+    if match_task_id and match_dataset_id:
+        task_id = int(match_task_id.group(1))
+        dataset_id = int(match_dataset_id.group(1))
+        edit_args = {}
+        for k, v in kwargs.iteritems():
+            edit_args[k.replace("{{dataset_id}}", str(dataset_id))] = v
+        r = admin_req('task/%s' % task_id,
+                      multipart_post=True,
+                      args=edit_args)
         created_tasks[task_id] = kwargs
-        return task_id
     else:
         raise FrameworkException("Unable to create task.")
+
+    r = admin_req('contest/' + kwargs["contest_id"] + '/tasks/add',
+                  multipart_post=True,
+                  args={"task_id": str(task_id)})
+    g = re.search('<input type="radio" name="task_id" value="' +
+                  str(task_id) + '"/>', r.read())
+    if g:
+        return task_id
+    else:
+        raise FrameworkException("Unable to assign task to contest.")
 
 
 def add_manager(task_id, manager):
@@ -446,12 +516,12 @@ def add_manager(task_id, manager):
         ('manager', manager),
     ]
     dataset_id = get_task_active_dataset_id(task_id)
-    admin_req('/add_manager/%d' % (dataset_id),
+    admin_req('dataset/%d/managers/add' % dataset_id,
               multipart_post=True, files=files, args=args)
 
 
 def get_task_active_dataset_id(task_id):
-    resp = admin_req('/task/%d' % task_id)
+    resp = admin_req('task/%d' % task_id)
     page = resp.read()
     match = re.search(
         r'id="title_dataset_([0-9]+).* \(Live\)</',
@@ -472,51 +542,51 @@ def add_testcase(task_id, num, input_file, output_file, public):
     if public:
         args['public'] = '1'
     dataset_id = get_task_active_dataset_id(task_id)
-    admin_req('/add_testcase/%d' % (dataset_id),
+    admin_req('dataset/%d/testcases/add' % dataset_id,
               multipart_post=True, files=files, args=args)
 
 
-def add_user(contest_id, **kwargs):
-    r = admin_req('/add_user/%d' % contest_id, args=kwargs)
+def add_user(**kwargs):
+    r = admin_req('users/add', args=kwargs)
     g = re.search(r'/user/([0-9]+)$', r.geturl())
     if g:
         user_id = int(g.group(1))
         created_users[user_id] = kwargs
-        return user_id
     else:
         raise FrameworkException("Unable to create user.")
 
+    kwargs["user_id"] = user_id
+    r = admin_req('contest/' + kwargs["contest_id"] + '/users/add',
+                  args=kwargs)
+    g = re.search('<input type="radio" name="user_id" value="' +
+                  str(user_id) + '"/>', r.read())
+    if g:
+        return user_id
+    else:
+        raise FrameworkException("Unable to create participation.")
 
-def add_existing_task(contest_id, task_id, **kwargs):
+
+def add_existing_task(task_id, **kwargs):
     '''Add information about an existing task to our database so that we can
     use it for submitting later.'''
     created_tasks[task_id] = kwargs
 
 
-def add_existing_user(contest_id, user_id, **kwargs):
+def add_existing_user(user_id, **kwargs):
     '''Add information about an existing user to our database so that we can
     use it for submitting later.'''
     created_users[user_id] = kwargs
 
 
-def cws_submit(contest_id, task_id, user_id, filename, language):
-    username = created_users[user_id]['username']
-    password = created_users[user_id]['password']
-    base_url = 'http://localhost:8888/'
+def cws_submit(contest_id, task_id, user_id, submission_format,
+               filenames, language):
     task = (task_id, created_tasks[task_id]['name'])
 
-    def step(request):
-        request.prepare()
-        request.execute()
-
-    browser = mechanize.Browser()
-    browser.set_handle_robots(False)
-
-    lr = LoginRequest(browser, username, password, base_url=base_url)
-    step(lr)
-    sr = SubmitRequest(browser, task, base_url=base_url, filename=filename)
-    step(sr)
-
+    browser = get_cws_browser(user_id)
+    sr = SubmitRequest(browser, task, base_url=CWS_BASE_URL,
+                       submission_format=submission_format,
+                       filenames=filenames)
+    sr.execute()
     submission_id = sr.get_submission_id()
 
     if submission_id is None:
@@ -525,23 +595,20 @@ def cws_submit(contest_id, task_id, user_id, filename, language):
     return submission_id
 
 
-def get_evaluation_result(contest_id, submission_id, timeout=30):
-    browser = mechanize.Browser()
-    browser.set_handle_robots(False)
-    base_url = 'http://localhost:8889/'
-
+def get_evaluation_result(contest_id, submission_id, timeout=60):
     WAITING_STATUSES = re.compile(
-        r'Compiling\.\.\.|Evaluating\.\.\.|Evaluated')
+        r'Compiling\.\.\.|Evaluating\.\.\.|Scoring\.\.\.|Evaluated')
     COMPLETED_STATUS = re.compile(
-        r'Compilation failed|Evaluated \(')
+        r'Compilation failed|Evaluated \(|Scored \(')
 
-    num_tries = timeout
-    while num_tries > 0:
-        num_tries -= 1
+    browser = get_aws_browser()
+    sleep_interval = 0.1
+    while timeout > 0:
+        timeout -= sleep_interval
 
-        sr = AWSSubmissionViewRequest(browser, submission_id,
-                                      base_url=base_url)
-        sr.prepare()
+        sr = AWSSubmissionViewRequest(browser,
+                                      submission_id,
+                                      base_url=AWS_BASE_URL)
         sr.execute()
 
         result = sr.get_submission_info()
@@ -551,7 +618,7 @@ def get_evaluation_result(contest_id, submission_id, timeout=30):
             return result
 
         if WAITING_STATUSES.search(status):
-            time.sleep(1)
+            time.sleep(sleep_interval)
             continue
 
         raise FrameworkException("Unknown submission status: %s" % status)

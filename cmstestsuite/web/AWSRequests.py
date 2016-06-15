@@ -4,7 +4,7 @@
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,20 @@ import re
 
 from BeautifulSoup import BeautifulSoup
 
-from cmstestsuite.web import GenericRequest
+from cmstestsuite.web import GenericRequest, LoginRequest
+
+
+class AWSLoginRequest(LoginRequest):
+    def test_success(self):
+        if not LoginRequest.test_success(self):
+            return False
+        fail_re = re.compile('Failed to log in.')
+        if fail_re.search(self.res_data) is not None:
+            return False
+        username_re = re.compile(self.username)
+        if username_re.search(self.res_data) is None:
+            return False
+        return True
 
 
 class AWSSubmissionViewRequest(GenericRequest):
@@ -55,7 +68,6 @@ class AWSSubmissionViewRequest(GenericRequest):
     def get_submission_info(self):
         # Only valid after self.execute()
         # Parse submission information out of response.
-
         soup = BeautifulSoup(self.res_data)
 
         info = {}
@@ -75,12 +87,9 @@ class AWSSubmissionViewRequest(GenericRequest):
         # Get evaluation results.
         evaluations = []
         tags = soup.findAll(id=re.compile(r"^eval_outcome_"))
-        for outcome_tag in sorted(tags, key=lambda t: t['id']):
-            codename = outcome_tag['id'][len("eval_outcome_"):]
-
+        text_tags = soup.findAll(id=re.compile(r"^eval_text_"))
+        for outcome_tag, text_tag in zip(tags, text_tags):
             # Get evaluation text also.
-            text_tag = soup.findAll(id="eval_text_%s" % codename)[0]
-
             evaluations.append({
                 'outcome': outcome_tag.text.strip(),
                 'text': text_tag.text.strip(),

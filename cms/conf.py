@@ -3,10 +3,11 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
+# Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -32,6 +33,7 @@ import logging
 import os
 import sys
 
+from .log import set_detailed_logs
 from .util import ServiceCoord, Address, async_config
 
 
@@ -57,6 +59,7 @@ class Config(object):
         self.temp_dir = "/tmp"
         self.backdoor = False
         self.file_log_debug = False
+        self.stream_log_detailed = False
         self.log_debug = False
 
         # Database.
@@ -87,13 +90,10 @@ class Config(object):
         self.submit_local_copy_path = "%s/submissions/"
         self.tests_local_copy = True
         self.tests_local_copy_path = "%s/tests/"
-        self.ip_lock = True
-        self.block_hidden_users = False
         self.is_proxy_used = False
         self.max_submission_length = 100000
         self.max_input_length = 5000000
         self.stl_path = "/usr/share/doc/stl-manual/html/"
-        self.allow_questions = True
         # Prefix of 'iso-codes'[1] installation. It can be found out
         # using `pkg-config --variable=prefix iso-codes`, but it's
         # almost universally the same (i.e. '/usr') so it's hardly
@@ -110,6 +110,7 @@ class Config(object):
         # AdminWebServer.
         self.admin_listen_address = ""
         self.admin_listen_port = 8889
+        self.admin_cookie_duration = 10 * 60 * 60  # 10 hours
 
         # ProxyService.
         self.rankings = ["http://usern4me:passw0rd@localhost:8890/"]
@@ -157,6 +158,10 @@ class Config(object):
 
         # Attempt to load a config file.
         self._load(paths)
+
+        # If the configuration says to print detailed log on stdout,
+        # change the log configuration.
+        set_detailed_logs(self.stream_log_detailed)
 
     def _load(self, paths):
         """Try to load the config files one at a time, until one loads

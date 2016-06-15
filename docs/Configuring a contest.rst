@@ -1,7 +1,7 @@
 Configuring a contest
 *********************
 
-In the following text "user" and "contestant" are used interchangeably.
+In the following text "user" and "contestant" are used interchangeably. A "participation" is an instance of a user participating in a specific constest.
 
 Configuration parameters will be referred to using their internal name, but it should always be easy to infer what fields control them in the AWS interface by using their label.
 
@@ -19,7 +19,7 @@ Contest administrators can limit the ability of users to submit submissions and 
 
 - ``min_submission_interval`` / ``min_user_test_interval``
 
-  These set, respectively, the minimum amount of time the user is required to wait after a submission or user test has been submitted before they are allowed to send in new ones. Any attempt to submit a submission or user test before this timeout has expired will fail.
+  These set, respectively, the minimum amount of time, in minutes, the user is required to wait after a submission or user test has been submitted before they are allowed to send in new ones. Any attempt to submit a submission or user test before this timeout has expired will fail.
 
 The limits can be set both for individual tasks and for the whole contest. A submission or user test is accepted if it verifies the conditions on both the task *and* the contest. This means that a submission or user test will be accepted if the number of submissions or user tests received so far for that task is strictly less that the task's maximum number *and* the number of submissions or user tests received so far for the whole contest (i.e. in all tasks) is strictly less than the contest's maximum number. The same holds for the minimum interval too: a submission or user test will be accepted if the time passed since the last submission or user test for that task is greater than the task's minimum interval *and* the time passed since the last submission or user test received for the whole contest (i.e. in any of the tasks) is greater than the contest's minimum interval.
 
@@ -90,14 +90,22 @@ Note that some "internal" scores used by ScoreTypes (for example the subtask sco
 The unrounded score is stored in the database (and it's rounded only at presentation level) so you can change the ``score_precision`` at any time without having to rescore any submissions. Yet, you have to make sure that these values are also updated on the RankingWebServers. To do that you can either restart ScoringService or update the data manually (see :doc:`RankingWebServer` for further information).
 
 
-Primary statements
-==================
+Languages
+=========
+
+Statements
+----------
 
 When there are many statements for a certain task (which are often different translations of the same statement) contest administrators may want to highlight some of them to the users. These may include, for example, the "official" version of the statement (the one that is considered the reference version in case of questions or appeals) or the translations for the languages understood by that particular user. To do that the ``primary_statements`` field of the tasks and the users has to be used.
 
 The ``primary_statements`` field for the tasks is a JSON-encoded list of strings: it specifies the language codes of the statements that will be highlighted to all users. A valid example is ``["en_US", "it"]``. The ``primary_statements`` field for the users is a JSON-encoded object of lists of strings. Each item in this object specifies a task by its name and provides a list of language codes of the statements to highlight. For example ``{"task1": ["de"], "task2": ["de_CH"]}``.
 
 Note that users will always be able to access all statements, regardless of the ones that are highlighted. Note also that language codes in the form ``xx`` or ``xx_YY`` (where ``xx`` is an `ISO 639-1 code <http://www.iso.org/iso/language_codes.htm>`_ and ``YY`` is an `ISO 3166-1 code <http://www.iso.org/iso/country_codes.htm>`_) will be recognized and presented accordingly. For example ``en_AU`` will be shown as "English (Australia)".
+
+Interface
+---------
+
+The interface for contestants can be localized (see :ref:`localization` for how to add new languages), and by default all languages will be available to all contestants. To limit the languages available to the contestants, the field "Allowed localizations" in the contest configuration can be set to the list of allowed language codes. The first of this language codes determines the fallback language in case the preferred language is not available.
 
 
 Timezone
@@ -113,11 +121,36 @@ When CWS needs to show a timestamp to the user it first tries to show it accordi
 User login
 ==========
 
-Users log into CWS using a username and a password. These have to be specified, respectively, in the ``username`` and ``password`` fields (in cleartext!). These credentials need to be inserted by the admins (i.e. there's no way to have an automatic login, a "guest" session, etc.). The user needs to login again if they do not navigate the site for ``cookie_duration`` seconds (specified in the :file:`cms.conf` file).
+Users log into CWS using their credentials (username and a password), or automatically, matching their IP address.
 
-In fact, there are other reasons that can cause the login to fail. If the ``ip_lock`` option (in :file:`cms.conf`) is set to ``true`` then the login will fail if the IP address that attempted it doesn't match the address or subnet in the ``ip`` field of the specified user. If ``ip`` is not set then this check is skipped, even if ``ip_lock`` is ``true``. Note that if a reverse-proxy (like nginx) is in use then it is necessary to set ``is_proxy_used`` (in :file:`cms.conf`) to ``true`` and configure the proxy in order to properly pass the ``X-Forwarded-For``-style headers (see :ref:`running-cms_recommended-setup`).
+Logging in with IP based autologin
+----------------------------------
 
-The login can also fail if ``block_hidden_users`` (in :file:`cms.conf`) is ``true`` and the user trying to login as has the ``hidden`` field set.
+If the "IP based autologin" option in the contest configuration is set, CWS tries to find a user with the IP address of the request, and if it finds exactly one, the requester is automatically logged in as the user. If zero or more than one user match, CWS does not let the user in (and the incident is logged to allow troubleshooting).
+
+.. warning::
+
+  If a reverse-proxy (like nginx) is in use then it is necessary to set ``is_proxy_used`` (in :file:`cms.conf`) to ``true`` and configure the proxy in order to properly pass the ``X-Forwarded-For``-style headers (see :ref:`running-cms_recommended-setup`).
+
+Logging in with credentials
+---------------------------
+
+If the autologin is not enabled, users can log in with username and password, which have to be specified in the user configuration (in cleartext, for the moment). The password can also be overridden for a specific contest in the participation configuration. These credentials need to be inserted by the admins (i.e. there's no way to sign up, of log in as a "guest", etc.).
+
+A successfully logged in user needs to reauthenticate after ``cookie_duration`` seconds (specified in the :file:`cms.conf` file) from when they last visited a page.
+
+Even without autologin, it is possible to restrict the IP address or subnet that the user is using for accessing CWS, using the "IP based login restriction" option in the contest configuration (in which case, admins need to set ``is_proxy_used`` as before). If this is set, then the login will fail if the IP address that attempted it does not match the address or subnet in the IP specified for the specified participation. If the participation IP address is not set, then no restriction applies.
+
+Failure to login
+----------------
+
+The following are some common reasons for login failures, all of them coming with some useful log message from CWS.
+
+- IP address mismatch (with IP based autologin): if the participation has the wrong IP address, or if more than one participation has the same IP address, then the login fails. Note that if the user is using the IP address of a different user, CWS will happily log them in without noticing anything.
+
+- IP address mismatch (using IP based login restrictions): the login fails if the participation has the wrong IP address or subnet.
+
+- Blocked hidden participations: users whose participation is hidden cannot log in if "Block hidden participations" is set in the contest configuration.
 
 
 .. _configuringacontest_usaco-like-contests:

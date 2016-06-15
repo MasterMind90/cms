@@ -586,7 +586,7 @@ class StupidSandbox(SandboxBase):
         """
         self.exec_time = None
         self.exec_num += 1
-        self.log = None
+
         logger.debug("Executing program in sandbox with command: `%s'.",
                      " ".join(command))
         with io.open(self.relative_path(self.cmd_file), 'at') as commands:
@@ -1280,7 +1280,8 @@ class IsolateSandbox(SandboxBase):
         elif exitcode == 2:
             return False
         else:
-            raise SandboxInterfaceException("Sandbox exit status unknown")
+            raise SandboxInterfaceException("Sandbox exit status (%d) unknown"
+                                            % exitcode)
 
     def delete(self):
         """Delete the directory where the sandbox operated.

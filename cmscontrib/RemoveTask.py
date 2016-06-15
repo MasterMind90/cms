@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2013 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2013-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,16 +29,41 @@ import argparse
 import sys
 
 from cms import utf8_decoder
-from cms.db import SessionGen, Task, ask_for_contest
+from cms.db import SessionGen, Task
 
 
-def remove_task(contest_id, task_name):
+def ask(task_name):
+    print("This will delete task `%s' and all related data, "
+          "including submissions. Are you sure? [y/N] "
+          % task_name, end='')
+    ans = sys.stdin.readline().strip().lower()
+    return ans in ["y", "yes"]
+
+
+def remove_task(task_name):
     with SessionGen() as session:
         task = session.query(Task)\
-            .filter(Task.contest_id == contest_id)\
             .filter(Task.name == task_name).first()
+        if not task:
+            print("No task called `%s' found." % task_name)
+            return
+        if not ask(task_name):
+            print("Not removing task `%s'." % task_name)
+            return
+        num = task.num
+        contest_id = task.contest_id
         session.delete(task)
         session.commit()
+        # Keeping the tasks' nums to the range 0... n - 1.
+        if contest_id is not None:
+            following_tasks = session.query(Task)\
+                .filter(Task.contest_id == contest_id)\
+                .filter(Task.num > num)\
+                .all()
+            for task in following_tasks:
+                task.num -= 1
+            session.commit()
+        print("Task `%s' removed." % task_name)
 
 
 def main():
@@ -46,21 +71,19 @@ def main():
 
     """
     parser = argparse.ArgumentParser(
-        description="Remove a task from a contest in CMS.")
-    parser.add_argument("task_name", action="store", type=utf8_decoder,
-                        help="short name of the task")
-    parser.add_argument("-c", "--contest-id", action="store", type=int,
-                        help="id of contest the task is in")
+        description="Remove a task from the database."
+    )
+
+    parser.add_argument(
+        "task_name",
+        action="store", type=utf8_decoder,
+        help="short name of the task"
+    )
+
     args = parser.parse_args()
 
-    if args.contest_id is None:
-        args.contest_id = ask_for_contest()
-
-    remove_task(contest_id=args.contest_id,
-                task_name=args.task_name)
-
-    return 0
+    remove_task(task_name=args.task_name)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

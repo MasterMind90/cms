@@ -34,9 +34,10 @@ import cms.log
 # Define what this package will provide.
 
 __all__ = [
+    "__version__",
     "LANG_C", "LANG_CPP", "LANG_PASCAL", "LANG_PYTHON", "LANG_PHP",
     "LANGUAGE_NAMES", "LANGUAGES", "DEFAULT_LANGUAGES",
-    "SOURCE_EXT_TO_LANGUAGE_MAP",
+    "SOURCE_EXT_TO_LANGUAGE_MAP", "filename_to_language",
     "LANGUAGE_TO_SOURCE_EXT_MAP", "LANGUAGE_TO_HEADER_EXT_MAP",
     "LANGUAGE_TO_OBJ_EXT_MAP",
     "SCORE_MODE_MAX", "SCORE_MODE_MAX_TOKENED_LAST",
@@ -51,6 +52,9 @@ __all__ = [
     # plugin
     "plugin_list", "plugin_lookup",
 ]
+
+
+__version__ = '1.3.dev0'
 
 
 # Instantiate or import these objects.
@@ -109,6 +113,22 @@ LANGUAGE_TO_OBJ_EXT_MAP = {
     LANG_CPP: ".o",
     LANG_PASCAL: ".o",
 }
+
+
+def filename_to_language(filename):
+    """Determine the programming language of filename from its extension.
+
+    filename (string): the file to test.
+
+    return (string|None): the extension of filename, or None if it is
+        not a recognized language.
+
+    """
+    for source_ext, language in SOURCE_EXT_TO_LANGUAGE_MAP.iteritems():
+        if filename.endswith(source_ext):
+            return language
+    return None
+
 
 # Task score modes.
 

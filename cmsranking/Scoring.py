@@ -205,7 +205,7 @@ class Score(object):
     def delete_subchange(self, key):
         # Delete the subchange from the (sorted) list and reset the
         # history.
-        self._changes = filter(lambda a: a.key != key, self._changes)
+        self._changes = [c for c in self._changes if c.key != key]
         self.reset_history()
         logger.info("Reset history after deleting subchange '%s'", key)
 
@@ -231,8 +231,7 @@ class Score(object):
         if key in self._submissions:
             del self._submissions[key]
             # Delete all its subchanges.
-            self._changes = filter(lambda a: a.submission != key,
-                                   self._changes)
+            self._changes = [c for c in self._changes if c.submission != key]
             self.reset_history()
 
     def update_score_mode(self, score_mode):
@@ -265,9 +264,15 @@ class ScoringStore(object):
         subchange_store.add_delete_callback(self.delete_subchange)
 
         self._scores = dict()
-
         self._callbacks = list()
 
+    def init_store(self):
+        """Load the scores from the stores.
+
+        This method must be called by RankingWebServer after it
+        finishes loading the data from disk.
+
+        """
         for key, value in submission_store._store.iteritems():
             self.create_submission(key, value)
         for key, value in sorted(subchange_store._store.iteritems()):

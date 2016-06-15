@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 #
@@ -29,7 +29,16 @@ import os
 import random
 
 from cmscommon.crypto import decrypt_number
-from cmstestsuite.web import GenericRequest
+from cmstestsuite.web import GenericRequest, LoginRequest
+
+
+class CWSLoginRequest(LoginRequest):
+    def test_success(self):
+        if not LoginRequest.test_success(self):
+            return False
+        if self.redirected_to != './':
+            return False
+        return True
 
 
 class HomepageRequest(GenericRequest):
@@ -56,39 +65,6 @@ class HomepageRequest(GenericRequest):
             if username_re.search(self.res_data) is not None:
                 return False
         return True
-
-
-class LoginRequest(GenericRequest):
-    """Try to login to CWS with given credentials.
-
-    """
-    def __init__(self, browser, username, password, base_url=None):
-        GenericRequest.__init__(self, browser, base_url)
-        self.username = username
-        self.password = password
-        self.url = '%slogin' % self.base_url
-        self.data = {'username': self.username,
-                     'password': self.password,
-                     'next': '/'}
-
-    def describe(self):
-        return "try to login"
-
-    def test_success(self):
-        if not GenericRequest.test_success(self):
-            return False
-        fail_re = re.compile('Failed to log in.')
-        if fail_re.search(self.res_data) is not None:
-            return False
-        username_re = re.compile(self.username)
-        if username_re.search(self.res_data) is None:
-            return False
-        return True
-
-    def specific_info(self):
-        return 'Username: %s\nPassword: %s\n' % \
-               (self.username, self.password) + \
-            GenericRequest.specific_info(self)
 
 
 class TaskRequest(GenericRequest):
@@ -125,24 +101,26 @@ class SubmitRequest(GenericRequest):
     """Submit a solution in CWS.
 
     """
-    def __init__(self, browser, task, filename, base_url=None):
+    def __init__(self, browser, task, submission_format,
+                 filenames, base_url=None):
         GenericRequest.__init__(self, browser, base_url)
         self.url = "%stasks/%s/submit" % (self.base_url, task[1])
         self.task = task
-        self.filename = filename
+        self.submission_format = submission_format
+        self.filenames = filenames
         self.data = {}
 
-    def prepare(self):
-        GenericRequest.prepare(self)
-        self.files = [('%s.%%l' % (self.task[1]), self.filename)]
+    def _prepare(self):
+        GenericRequest._prepare(self)
+        self.files = list(zip(self.submission_format, self.filenames))
 
     def describe(self):
-        return "submit source %s for task %s (ID %d) %s" % \
-            (self.filename, self.task[1], self.task[0], self.url)
+        return "submit sources %s for task %s (ID %d) %s" % \
+            (repr(self.filenames), self.task[1], self.task[0], self.url)
 
     def specific_info(self):
         return 'Task: %s (ID %d)\nFile: %s\n' % \
-            (self.task[1], self.task[0], self.filename) + \
+            (self.task[1], self.task[0], repr(self.filenames)) + \
             GenericRequest.specific_info(self)
 
     def test_success(self):
@@ -153,10 +131,15 @@ class SubmitRequest(GenericRequest):
 
     def get_submission_id(self):
         # Only valid after self.execute()
-        # Parse submission ID out of response.
-        p = self.browser.geturl().split("?")[-1]
+        # Parse submission ID out of redirect.
+        if self.redirected_to is None:
+            return None
+
+        p = self.redirected_to.split("?")
+        if len(p) != 2:
+            return None
         try:
-            submission_id = decrypt_number(p)
+            submission_id = decrypt_number(p[-1])
         except Exception:
             return None
         return submission_id
@@ -175,9 +158,6 @@ class TokenRequest(GenericRequest):
         self.submission_num = submission_num
         self.data = {}
 
-    def prepare(self):
-        GenericRequest.prepare(self)
-
     def describe(self):
         return "release test the %s-th submission for task %s (ID %d)" % \
             (self.submission_num, self.task[1], self.task[0])
@@ -186,12 +166,6 @@ class TokenRequest(GenericRequest):
         return 'Task: %s (ID %d)\nSubmission: %s\n' % \
             (self.task[1], self.task[0], self.submission_num) + \
             GenericRequest.specific_info(self)
-
-    def test_success(self):
-        if not GenericRequest.test_success(self):
-            return False
-
-        return True
 
 
 class SubmitRandomRequest(SubmitRequest):
@@ -206,13 +180,36 @@ class SubmitRandomRequest(SubmitRequest):
         self.submissions_path = submissions_path
         self.data = {}
 
-    def prepare(self):
-        GenericRequest.prepare(self)
+    def _prepare(self):
+        """Select a random solution and prepare it for submission.
+
+        If task/ is the task directory, it might contain files (only
+        if the submission format is with a single file) and
+        directory. If it contains a file, it is assumed that it is the
+        only element in the submission format, and is the basename
+        without extension of the file. If it is a directory, all files
+        inside are assumed to be part of the submission format with
+        their basenames without extension.
+
+        """
+        GenericRequest._prepare(self)
+
+        # Select a random directory or file inside the task directory.
         task_path = os.path.join(self.submissions_path, self.task[1])
         sources = os.listdir(task_path)
         source = random.choice(sources)
         self.source_path = os.path.join(task_path, source)
-        self.files = [('%s.%%l' % (self.task[1]), self.source_path)]
+
+        # Compose the submission format
+        self.files = []
+        if os.path.isdir(self.source_path):
+            submission_formats = os.listdir(self.source_path)
+            self.files = [('%s.%%l' % (os.path.splitext(sf)[0]),
+                           os.path.join(self.source_path, sf))
+                          for sf in submission_formats]
+        else:
+            submission_format = os.path.splitext(source)[0]
+            self.files = [('%s.%%l' % (submission_format), self.source_path)]
 
     def describe(self):
         return "submit source %s for task %s (ID %d) %s" % \

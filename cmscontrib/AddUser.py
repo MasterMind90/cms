@@ -2,10 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Contest Management System - http://cms-dev.github.io/
-# Copyright © 2012 Bernard Blackham <bernard@largestprime.net>
-# Copyright © 2010-2011 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2011 Stefano Maggiolo <s.maggiolo@gmail.com>
-# Copyright © 2010-2011 Matteo Boscariol <boscarim@hotmail.com>
+# Copyright © 2016 Stefano Maggiolo <s.maggiolo@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Utility to add a user to a contest.
+"""This script creates a new user in the database.
 
 """
 
@@ -28,67 +25,82 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+# We enable monkey patching to make many libraries gevent-friendly
+# (for instance, urllib3, used by requests)
+import gevent.monkey
+gevent.monkey.patch_all()
+
 import argparse
+import logging
 import sys
 
 from cms import utf8_decoder
-from cms.db import SessionGen, User, Contest, ask_for_contest
+from cms.db import SessionGen, User
+from cmscommon.crypto import generate_random_password
+
+from sqlalchemy.exc import IntegrityError
 
 
-def add_user(contest_id, first_name, last_name, username,
-             password, ip_address, email, hidden):
-    with SessionGen() as session:
-        contest = Contest.get_from_id(contest_id, session)
-        user = User(first_name=first_name,
-                    last_name=last_name,
-                    username=username,
-                    password=password,
-                    email=email,
-                    ip=ip_address,
-                    hidden=hidden,
-                    contest=contest)
-        session.add(user)
-        session.commit()
+logger = logging.getLogger(__name__)
+
+
+def add_user(first_name, last_name, username, password, email, timezone,
+             preferred_languages):
+    logger.info("Creating the user in the database.")
+    if password is None:
+        password = generate_random_password()
+    if preferred_languages is None or preferred_languages == "":
+        preferred_languages = "[]"
+    else:
+        preferred_languages = \
+            "[" + ",".join("\"" + lang + "\""
+                           for lang in preferred_languages.split(",")) + "]"
+    user = User(first_name=first_name,
+                last_name=last_name,
+                username=username,
+                password=password,
+                email=email,
+                timezone=timezone,
+                preferred_languages=preferred_languages)
+    try:
+        with SessionGen() as session:
+            session.add(user)
+            session.commit()
+    except IntegrityError:
+        logger.error("A user with the given username already exists.")
+        return False
+
+    logger.info("User added. "
+                "Use AddParticipation to add this user to a contest.")
+    return True
 
 
 def main():
     """Parse arguments and launch process.
 
     """
-    parser = argparse.ArgumentParser(
-        description="Adds a user to a contest in CMS.")
+    parser = argparse.ArgumentParser(description="Add a user to CMS.")
     parser.add_argument("first_name", action="store", type=utf8_decoder,
-                        help="first name of the user")
+                        help="given name of the user")
     parser.add_argument("last_name", action="store", type=utf8_decoder,
-                        help="last name of the user")
+                        help="family name of the user")
     parser.add_argument("username", action="store", type=utf8_decoder,
-                        help="username of the user")
-    parser.add_argument("-c", "--contest-id", action="store", type=int,
-                        help="id of contest where to add the user")
+                        help="username used to log in")
     parser.add_argument("-p", "--password", action="store", type=utf8_decoder,
-                        help="password of the user")
-    parser.add_argument("-i", "--ip-address", action="store",
-                        type=utf8_decoder, help="ip address of the user")
+                        help="password, leave empty to auto-generate")
     parser.add_argument("-e", "--email", action="store", type=utf8_decoder,
-                        help="email address of the user")
-    parser.add_argument("-H", "--hidden", action="store_true",
-                        help="if the user is hidden")
+                        help="email of the user")
+    parser.add_argument("-t", "--timezone", action="store", type=utf8_decoder,
+                        help="timezone of the user, e.g. Europe/London")
+    parser.add_argument("-l", "--languages", action="store", type=utf8_decoder,
+                        help="comma-separated list of preferred languages")
+
     args = parser.parse_args()
 
-    if args.contest_id is None:
-        args.contest_id = ask_for_contest()
-
-    add_user(contest_id=args.contest_id,
-             first_name=args.first_name,
-             last_name=args.last_name,
-             username=args.username,
-             password=args.password,
-             ip_address=args.ip_address,
-             email=args.email,
-             hidden=args.hidden)
-
-    return 0
+    return add_user(args.first_name, args.last_name,
+                    args.username, args.password, args.email,
+                    args.timezone, args.languages)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(0 if main() is True else 1)

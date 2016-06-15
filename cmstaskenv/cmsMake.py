@@ -3,10 +3,10 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2014 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2012 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Luca Wehrstedt <luca.wehrstedt@gmail.com>
-# Copyright © 2014 Luca Versari <veluca93@gmail.com>
+# Copyright © 2014-2015 Luca Versari <veluca93@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -35,11 +35,13 @@ import functools
 import shutil
 import tempfile
 import yaml
+import logging
 
 from cms import utf8_decoder
 from cms.grading import get_compilation_commands
 from cmstaskenv.Test import test_testcases, clean_test_env
-
+from cmscommon.terminal import move_cursor, add_color_to_string, \
+    colors, directions
 
 SOL_DIRNAME = 'sol'
 SOL_FILENAME = 'soluzione'
@@ -67,12 +69,13 @@ RESULT_DIRNAME = 'result'
 DATA_DIRS = [os.path.join('.', 'cmstaskenv', 'data'),
              os.path.join('/', 'usr', 'local', 'share', 'cms', 'cmsMake')]
 
+logger = logging.getLogger()
+
 
 def detect_data_dir():
     for _dir in DATA_DIRS:
         if os.path.exists(_dir):
             return os.path.abspath(_dir)
-
 
 DATA_DIR = detect_data_dir()
 
@@ -81,7 +84,7 @@ def endswith2(string, suffixes):
     """True if string ends with one of the given suffixes.
 
     """
-    return any(filter(lambda x: string.endswith(x), suffixes))
+    return any(string.endswith(suffix) for suffix in suffixes)
 
 
 def basename2(string, suffixes):
@@ -91,10 +94,10 @@ def basename2(string, suffixes):
 
     """
     try:
-        idx = map(lambda x: string.endswith(x), suffixes).index(True)
-    except ValueError:
-        return None
-    return (string[:-len(suffixes[idx])], string[-len(suffixes[idx]):])
+        suffix = next(s for s in suffixes if string.endswith(s))
+        return string[:-len(suffix)], string[-len(suffix):]
+    except StopIteration:
+        return None, None
 
 
 def call(base_dir, args, stdin=None, stdout=None, stderr=None, env=None):
@@ -112,11 +115,11 @@ def call(base_dir, args, stdin=None, stdout=None, stderr=None, env=None):
 
 
 def detect_task_name(base_dir):
-    return os.path.split(os.path.realpath(base_dir))[1]
+    return os.path.split(os.path.abspath(base_dir))[1]
 
 
 def parse_task_yaml(base_dir):
-    parent_dir = os.path.split(os.path.realpath(base_dir))[0]
+    parent_dir = os.path.split(os.path.abspath(base_dir))[0]
 
     # We first look for the yaml file inside the task folder,
     # and eventually fallback to a yaml file in its parent folder.
@@ -138,17 +141,13 @@ def detect_task_type(base_dir):
     sol_dir = os.path.join(base_dir, SOL_DIRNAME)
     check_dir = os.path.join(base_dir, CHECK_DIRNAME)
     grad_present = os.path.exists(sol_dir) and \
-        any(filter(lambda x: x.startswith(GRAD_BASENAME + '.'),
-                   os.listdir(sol_dir)))
+        any(x.startswith(GRAD_BASENAME + '.') for x in os.listdir(sol_dir))
     stub_present = os.path.exists(sol_dir) and \
-        any(filter(lambda x: x.startswith(STUB_BASENAME + '.'),
-                   os.listdir(sol_dir)))
+        any(x.startswith(STUB_BASENAME + '.') for x in os.listdir(sol_dir))
     cor_present = os.path.exists(check_dir) and \
-        any(filter(lambda x: x.startswith('correttore.'),
-                   os.listdir(check_dir)))
+        any(x.startswith('correttore.') for x in os.listdir(check_dir))
     man_present = os.path.exists(check_dir) and \
-        any(filter(lambda x: x.startswith('manager.'),
-                   os.listdir(check_dir)))
+        any(x.startswith('manager.') for x in os.listdir(check_dir))
 
     if not (cor_present or man_present or stub_present or grad_present):
         return ["Batch", "Diff"]  # TODO Could also be an OutputOnly
@@ -173,12 +172,12 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
         return []
 
     sol_dir = os.path.join(base_dir, SOL_DIRNAME)
-    entries = map(lambda x: os.path.join(SOL_DIRNAME, x), os.listdir(sol_dir))
-    sources = filter(lambda x: endswith2(x, SOL_EXTS), entries)
 
     actions = []
     test_actions = []
-    for src in sources:
+    for src in (os.path.join(SOL_DIRNAME, x)
+                for x in os.listdir(sol_dir)
+                if endswith2(x, SOL_EXTS)):
         exe, lang = basename2(src, SOL_EXTS)
         # Delete the dot
         lang = lang[1:]
@@ -204,8 +203,7 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
                                      STUB_BASENAME + '.%s' % (lang)))
         srcs.append(src)
 
-        test_deps = \
-            [exe_EVAL, os.path.join(TEXT_DIRNAME, TEXT_PDF)] + in_out_files
+        test_deps = [exe_EVAL] + in_out_files
         if task_type == ['Batch', 'Comp'] or \
                 task_type == ['Batch', 'GradComp']:
             test_deps.append('cor/correttore')
@@ -221,6 +219,7 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
                     for_evaluation=for_evaluation)
                 for command in compilation_commands:
                     call(base_dir, command)
+                    move_cursor(directions.UP, erase=True, stream=sys.stderr)
 
             # When using Pascal with graders, file naming conventions
             # require us to do a bit of trickery, i.e., performing the
@@ -246,6 +245,7 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
                     for_evaluation=for_evaluation)
                 for command in compilation_commands:
                     call(tempdir, command)
+                    move_cursor(directions.UP, erase=True, stream=sys.stderr)
                 shutil.copyfile(os.path.join(tempdir, new_exe),
                                 os.path.join(base_dir, exe))
                 shutil.copymode(os.path.join(tempdir, new_exe),
@@ -253,7 +253,11 @@ def build_sols_list(base_dir, task_type, in_out_files, yaml_conf):
                 shutil.rmtree(tempdir)
 
         def test_src(exe, lang, assume=None):
-            print("Testing solution %s" % (exe))
+            # Solution names begin with sol/ and end with _EVAL, we strip that
+            print(
+                "Testing solution",
+                add_color_to_string(exe[4:-5], colors.BLACK, bold=True)
+            )
             test_testcases(
                 base_dir,
                 exe,
@@ -284,10 +288,9 @@ def build_checker_list(base_dir, task_type):
     actions = []
 
     if os.path.exists(check_dir):
-        entries = map(lambda x: os.path.join(CHECK_DIRNAME, x),
-                      os.listdir(check_dir))
-        sources = filter(lambda x: endswith2(x, SOL_EXTS), entries)
-        for src in sources:
+        for src in (os.path.join(CHECK_DIRNAME, x)
+                    for x in os.listdir(check_dir)
+                    if endswith2(x, SOL_EXTS)):
             exe, lang = basename2(src, CHECK_EXTS)
             # Delete the dot
             lang = lang[1:]
@@ -320,6 +323,7 @@ def build_text_list(base_dir, task_type):
     if os.path.exists(text_tex):
         actions.append(([text_tex], [text_pdf, text_aux, text_log],
                         make_pdf, 'compile to PDF'))
+
     return actions
 
 
@@ -361,16 +365,14 @@ def iter_GEN(name):
                 st += 1
 
 
-def build_gen_list(base_dir, task_type):
+def build_gen_list(base_dir, task_type, yaml_conf):
     input_dir = os.path.join(base_dir, INPUT_DIRNAME)
     output_dir = os.path.join(base_dir, OUTPUT_DIRNAME)
     gen_dir = os.path.join(base_dir, GEN_DIRNAME)
-    entries = os.listdir(gen_dir)
-    sources = filter(lambda x: endswith2(x, GEN_EXTS), entries)
     gen_exe = None
     validator_exe = None
 
-    for src in sources:
+    for src in (x for x in os.listdir(gen_dir) if endswith2(x, GEN_EXTS)):
         base, lang = basename2(src, GEN_EXTS)
         if base == GEN_BASENAME:
             gen_exe = os.path.join(GEN_DIRNAME, base)
@@ -420,7 +422,12 @@ def build_gen_list(base_dir, task_type):
         except OSError:
             pass
         for (is_copy, line, st) in testcases:
-            print("Generating input # %d" % (n), file=sys.stderr)
+            print(
+                "Generating",
+                add_color_to_string("input # %d" % n, colors.BLACK,
+                                    stream=sys.stderr, bold=True),
+                file=sys.stderr
+            )
             new_input = os.path.join(input_dir, 'input%d.txt' % (n))
             if is_copy:
                 # Copy the file
@@ -438,24 +445,59 @@ def build_gen_list(base_dir, task_type):
                 command.append("%s" % st)
             call(base_dir, command)
             n += 1
+            for i in xrange(3):
+                move_cursor(directions.UP, erase=True, stream=sys.stderr)
 
     def make_output(n, assume=None):
         try:
             os.makedirs(output_dir)
         except OSError:
             pass
-        print("Generating output # %d" % (n), file=sys.stderr)
-        with io.open(os.path.join(input_dir,
-                                  'input%d.txt' % (n)), 'rb') as fin:
-            with io.open(os.path.join(output_dir,
-                                      'output%d.txt' % (n)), 'wb') as fout:
-                if task_type != ['Communication', '']:
-                    call(base_dir, [sol_exe], stdin=fin, stdout=fout)
+        print(
+            "Generating",
+            add_color_to_string("output # %d" % n, colors.BLACK,
+                                stream=sys.stderr, bold=True),
+            file=sys.stderr
+        )
 
-                # If the task of of type Communication, then there is
-                # nothing to put in the output files
-                else:
-                    pass
+        temp_dir = tempfile.mkdtemp(prefix=os.path.join(base_dir, "tmp"))
+        use_stdin = yaml_conf.get("infile") in {None, ""}
+        use_stdout = yaml_conf.get("outfile") in {None, ""}
+
+        # Names of the actual source and destination.
+        infile = os.path.join(input_dir, 'input%d.txt' % (n))
+        outfile = os.path.join(output_dir, 'output%d.txt' % (n))
+
+        # Names of the input and output in temp directory.
+        copied_infile = os.path.join(
+            temp_dir,
+            "input.txt" if use_stdin else yaml_conf.get("infile"))
+        copied_outfile = os.path.join(
+            temp_dir,
+            "output.txt" if use_stdout else yaml_conf.get("outfile"))
+
+        os.symlink(infile, copied_infile)
+        fin = io.open(copied_infile, "rb") if use_stdin else None
+        fout = io.open(copied_outfile, 'wb') if use_stdout else None
+
+        shutil.copy(sol_exe, temp_dir)
+
+        # If the task of of type Communication, then there is
+        # nothing to put in the output files
+        if task_type != ['Communication', '']:
+            call(temp_dir, [os.path.join(temp_dir, SOL_FILENAME)],
+                 stdin=fin, stdout=fout)
+            move_cursor(directions.UP, erase=True, stream=sys.stderr)
+
+        if fin is not None:
+            fin.close()
+        if fout is not None:
+            fout.close()
+
+        os.rename(copied_outfile, outfile)
+        shutil.rmtree(temp_dir)
+
+        move_cursor(directions.UP, erase=True, stream=sys.stderr)
 
     actions = []
     actions.append(([gen_src],
@@ -468,9 +510,8 @@ def build_gen_list(base_dir, task_type):
                                       validator_exe, validator_lang),
                     "compile the validator"))
     actions.append(([gen_GEN, gen_exe, validator_exe] + copy_files,
-                    map(lambda x: os.path.join(INPUT_DIRNAME,
-                                               'input%d.txt' % (x)),
-                        range(0, testcase_num)),
+                    [os.path.join(INPUT_DIRNAME, 'input%d.txt' % (x))
+                     for x in range(0, testcase_num)],
                     make_input,
                     "input generation"))
 
@@ -507,7 +548,7 @@ def build_action_list(base_dir, task_type, yaml_conf):
 
     """
     actions = []
-    gen_actions, in_out_files = build_gen_list(base_dir, task_type)
+    gen_actions, in_out_files = build_gen_list(base_dir, task_type, yaml_conf)
     actions += gen_actions
     actions += build_sols_list(base_dir, task_type, in_out_files, yaml_conf)
     actions += build_checker_list(base_dir, task_type)
@@ -537,7 +578,8 @@ def clean(base_dir, generated_list):
     except OSError:
         pass
 
-    # Delete backup files
+    # Delete compiled and/or backup files
+    os.system("find %s -name '*.o' -delete" % (base_dir))
     os.system("find %s -name '*.pyc' -delete" % (base_dir))
     os.system("find %s -name '*~' -delete" % (base_dir))
 
@@ -610,8 +652,8 @@ def execute_target(base_dir, exec_tree, target,
 
     # Check if the action really needs to be done (i.e., there is one
     # dependency more recent than the generated file)
-    dep_times = max([0] + map(lambda dep: os.stat(
-        os.path.join(base_dir, dep)).st_mtime, deps))
+    dep_times = max(
+        [0] + [os.stat(os.path.join(base_dir, dep)).st_mtime for dep in deps])
     try:
         gen_time = os.stat(os.path.join(base_dir, target)).st_mtime
     except OSError:
@@ -694,6 +736,7 @@ def main():
 
     elif options.all:
         print("Making all targets")
+        print()
         try:
             execute_multiple_targets(base_dir, exec_tree,
                                      generated_list, debug=options.debug,
