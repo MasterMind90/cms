@@ -247,7 +247,7 @@ class ResourceService(Service):
 
         """
         logger.debug("ResourceService._find_proc")
-        for proc in psutil.get_process_list():
+        for proc in psutil.process_iter():
             try:
                 proc_info = proc.as_dict(attrs=PSUTIL_PROC_ATTRS)
                 if ResourceService._is_service_proc(
