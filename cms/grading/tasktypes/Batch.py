@@ -261,8 +261,8 @@ class Batch(TaskType):
             stdout_redirect=stdout_redirect)
 
         # Populate this as we need this to fill Evaluation
-        plus["stdout"] = sandbox.get_file_to_string(stdout_redirect, maxlen=1048576)
-        plus["stderr"] = sandbox.get_file_to_string("stderr.txt", maxlen=1048576)
+        plus["stdout"] = unicode(sandbox.get_file_to_string(stdout_redirect, maxlen=1048576), errors='ignore')
+        plus["stderr"] = unicode(sandbox.get_file_to_string("stderr.txt", maxlen=1048576), errors='ignore')
 
         job.sandboxes = [sandbox.path]
         job.plus = plus
