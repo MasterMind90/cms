@@ -201,6 +201,22 @@
     </tr>
     <tr>
       <td>
+        <span class="info" title="The time where the ranking freeze."></span>
+	Freeze time
+      </td>
+      <td><input type="text" name="freeze_time" value="{{ str(contest.freeze_time) }}"></td>
+    </tr>
+    <tr>
+      <td>
+        <span class="info" title="Check to unfreeze the ranking."></span>
+        <label for="unfreeze">Unfreeze</label>
+      </td>
+      <td>
+        <input type="checkbox" id="unfreeze" name="unfreeze" {{ "checked" if contest.unfreeze else "" }}/>
+      </td>
+    </tr>
+    <tr>
+      <td>
         <span class="info" title="Timezone of the server, used to display start, end times and the current server time to contestants.
                                   Example: 'Europe/Rome', 'America/New_York', ..."></span>
         Timezone
