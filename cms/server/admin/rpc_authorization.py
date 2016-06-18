@@ -39,6 +39,7 @@ RPCS_ALLOWED_FOR_AUTHENTICATED = [
     ("EvaluationService", "submissions_status"),
     ("EvaluationService", "queue_status"),
     ("LogService", "last_messages"),
+    ("ProxyService", "update_all"),
 ]
 
 

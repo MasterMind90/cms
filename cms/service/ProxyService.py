@@ -363,6 +363,7 @@ class ProxyService(TriggeredService):
                     "max_score": score_type.max_score,
                     "extra_headers": score_type.ranking_headers,
                     "score_precision": task.score_precision,
+		    "score_type": score_type.__class__.__name__,
                     "score_mode": task.score_mode,
                 }
 
