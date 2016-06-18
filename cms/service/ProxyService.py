@@ -551,7 +551,7 @@ class ProxyService(TriggeredService):
             for submission in session.query(Submission).join(Task) \
                 .filter(Task.contest == contest).all():
                 # Update RWS.
-                if not submission.user.hidden and \
+                if not submission.participation.hidden and \
                         submission.get_result() is not None and \
                         submission.get_result().scored():
                     for operation in self.operations_for_score(submission):
