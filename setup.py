@@ -79,6 +79,9 @@ PACKAGE_DATA = {
         os.path.join("tasks", "communication2", "code", "*"),
         os.path.join("tasks", "communication2", "data", "*.*"),
     ],
+    "cmscontrib.loaders": [
+        os.path.join("polygon", "testlib.h"),
+    ]
 }
 
 
