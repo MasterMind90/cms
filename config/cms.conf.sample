@@ -59,6 +59,10 @@
     "_help": "of space very soon.",
     "keep_sandbox": false,
 
+    "_help": "Keep output and error for each testcase evaluation. ",
+    "_help": "Can be downloaded in admin interface",
+    "keep_output": true,
+    "keep_error": true,
 
 
     "_section": "Sandbox",
