@@ -118,6 +118,8 @@
     "_help": "STL documentation path in the system (exposed in CWS).",
     "stl_path": "/usr/share/doc/stl-manual/html/",
 
+    "_help": "Don't change source filename. Make it easier for java user when using JVM.",
+    "dont_change_source_filename" : false,
 
 
     "_section": "AdminWebServer",
