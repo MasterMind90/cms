@@ -39,9 +39,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import json
+import logging
 
 from cms.db import File, Manager, Executable, UserTestExecutable, Evaluation
+from cms import config
 
+logger = logging.getLogger(__name__)
 
 class Job(object):
     """Base class for all jobs.
@@ -304,8 +307,8 @@ class EvaluationJob(Job):
                  input=None, output=None,
                  time_limit=None, memory_limit=None,
                  success=None, outcome=None, text=None,
-                 user_output=None, plus=None,
-                 only_execution=False, get_output=False):
+                 user_output=None, user_error=None, plus=None,
+                 only_execution=False, get_output=False, get_error=False):
         """Initialization.
 
         See base class for the remaining arguments.
@@ -364,9 +367,11 @@ class EvaluationJob(Job):
         self.outcome = outcome
         self.text = text
         self.user_output = user_output
+        self.user_error = user_error
         self.plus = plus
         self.only_execution = only_execution
         self.get_output = get_output
+        self.get_error = get_error
 
     def export_to_dict(self):
         res = Job.export_to_dict(self)
@@ -388,9 +393,11 @@ class EvaluationJob(Job):
             'outcome': self.outcome,
             'text': self.text,
             'user_output': self.user_output,
+            'user_error': self.user_error,
             'plus': self.plus,
             'only_execution': self.only_execution,
             'get_output': self.get_output,
+            'get_error': self.get_error,
             })
         return res
 
@@ -432,6 +439,8 @@ class EvaluationJob(Job):
         job.output = testcase.output
         job.info = "evaluate submission %d on testcase %s" % \
                    (submission.id, testcase.codename)
+        job.get_output = config.keep_output
+        job.get_error = config.keep_error
 
         return job
 
@@ -451,8 +460,8 @@ class EvaluationJob(Job):
             execution_memory=self.plus.get('execution_memory'),
             evaluation_shard=self.shard,
             evaluation_sandbox=":".join(self.sandboxes),
-            stdout=self.plus.get('stdout'),
-            stderr=self.plus.get('stderr'),
+            user_output=self.user_output,
+            user_error=self.user_error,
             testcase=sr.dataset.testcases[self.testcase_codename])]
 
     @staticmethod

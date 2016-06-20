@@ -260,9 +260,11 @@ class Batch(TaskType):
             stdin_redirect=stdin_redirect,
             stdout_redirect=stdout_redirect)
 
-        # Populate this as we need this to fill Evaluation
-        plus["stdout"] = unicode(sandbox.get_file_to_string(stdout_redirect, maxlen=1048576), errors='ignore')
-        plus["stderr"] = unicode(sandbox.get_file_to_string("stderr.txt", maxlen=1048576), errors='ignore')
+        if job.get_error:
+            job.user_error = sandbox.get_file_to_storage(
+                        "stderr.txt",
+                        "Standard error file in job %s" % job.info,
+                        trunc_len=100 * 1024)
 
         job.sandboxes = [sandbox.path]
         job.plus = plus

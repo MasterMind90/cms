@@ -2,6 +2,7 @@
 
 {% block core %}
 {% from cms.grading import format_status_text %}
+{% from cms import config %}
 {% from cms.grading.scoretypes import get_score_type %}
 {% set st = get_score_type(dataset=shown_dataset) %}
 {% set sr = s.get_result(shown_dataset) %}
@@ -42,13 +43,23 @@
       <tr>
         <td>Files</td>
         <td>
-          {% for filename in [x.filename for x in s.task.submission_format] %}
-            {% if filename in s.files %}
+          {% if config.dont_change_source_filename %}
+            {% for filename in s.files %}
               {% set real_filename = filename if s.language is None else filename.replace("%l", s.language) %}
           <a href="javascript:void(0);" onclick="utils.show_file('{{ real_filename }}','{{ url_root }}/submission_file/{{ s.files[filename].id }}')">
             {{ real_filename }}
           </a>
           <br/>
+            {% end %}
+          {% else %}
+            {% for filename in [x.filename for x in s.task.submission_format] %}
+              {% if filename in s.files %}
+                {% set real_filename = filename if s.language is None else filename.replace("%l", s.language) %}
+            <a href="javascript:void(0);" onclick="utils.show_file('{{ real_filename }}','{{ url_root }}/submission_file/{{ s.files[filename].id }}')">
+              {{ real_filename }}
+            </a>
+            <br/>
+              {% end %}
             {% end %}
           {% end %}
         </td>
@@ -191,8 +202,20 @@
           {% end %}
         </td>
         <td>{{ ev.evaluation_sandbox }}</td>
-        <td><a href="{{ url_root }}/stdout/{{ ev.id }}">Raw</a></td>
-        <td><a href="{{ url_root }}/stderr/{{ ev.id }}">Raw</a></td>
+        <td>
+          {% if ev.user_output != None %}
+          <a href="{{ url_root }}/file/{{ ev.user_output }}/stdout">Raw</a>
+          {% else %}
+          Unavailable
+          {% end %}
+        </td>
+        <td>
+          {% if ev.user_error != None %}
+          <a href="{{ url_root }}/file/{{ ev.user_error }}/stderr">Raw</a>
+          {% else %}
+          Unavailable
+          {% end %}
+        </td>
       </tr>
       {% end %}
     </tbody>

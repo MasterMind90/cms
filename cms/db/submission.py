@@ -707,11 +707,12 @@ class Evaluation(Base):
         nullable=True)
 
     # Output of the execution
-    stdout = Column(
-        Unicode,
+    user_output = Column(
+        String,
         nullable=True)
-    stderr = Column(
-        Unicode,
+
+    user_error = Column(
+        String,
         nullable=True)
 
     @property

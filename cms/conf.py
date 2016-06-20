@@ -69,6 +69,8 @@ class Config(object):
 
         # Worker.
         self.keep_sandbox = True
+        self.keep_output = True
+        self.keep_error = True
         self.use_cgroups = True
         self.sandbox_implementation = 'isolate'
         self.use_jvm = False # Use normal JVM instead of gcj
