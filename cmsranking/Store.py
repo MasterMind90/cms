@@ -77,8 +77,8 @@ class Store(object):
 
         """
         try:
-            os.mkdir(self._path)
-        except OSError:
+            os.makedirs(self._path)
+        except OSError as e:
             # it's ok: it means the directory already exists
             pass
 

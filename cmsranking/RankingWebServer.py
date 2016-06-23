@@ -498,6 +498,7 @@ def main():
     User.store.load_from_disk()
     Submission.store.load_from_disk()
     Subchange.store.load_from_disk()
+    Tag.store.load_from_disk()
 
     Scoring.store.init_store()
 

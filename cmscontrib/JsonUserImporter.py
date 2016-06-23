@@ -20,10 +20,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Utility to add multiple user to a contest.
+""" Utility to add multiple user to a contest.
 
     The input file is expected to be a single JSON file with two key "users" and "tags"
     This utility assume that the RankingServer is on the same machine.
+
+    This differ with the default loader where it also integrate the "tags" which
+    is used in the RankingServer
 """
 
 from __future__ import absolute_import
@@ -37,7 +40,7 @@ import json
 from cms import utf8_decoder
 from cmsranking import Tag as RankingTag
 from cmsranking import User as RankingUser
-from cms.db import SessionGen, User, Contest, ask_for_contest
+from cms.db import SessionGen, User, Contest, Participation, ask_for_contest
 
 def main():
     """Parse arguments and launch process.
@@ -73,33 +76,35 @@ def main():
 
         for username in obj["users"]:
             userob = obj["users"][username]
-            if session.query(User).filter(User.contest == contest).filter(User.username == username).count() > 0:
+            user = None
+            if session.query(User).filter(User.username == username).count() > 0:
                 print("Updating %s "%username)
-                user = session.query(User).filter(User.contest == contest).filter(User.username == username)[0]
+                user = session.query(User).filter(User.username == username)[0]
                 user.first_name = userob.get("first_name", user.first_name)
                 user.last_name = userob.get("last_name", user.last_name)
                 user.username = userob.get("username", user.username)
                 user.password = userob.get("password", user.password)
                 user.email = userob.get("email", user.email)
-                user.ip = userob.get("ip", user.ip)
-                user.hidden = userob.get("hidden", user.hidden)
             else:
                 print("Adding %s "%username)
                 user = User(first_name=userob.get("first_name", ""),
                             last_name=userob.get("last_name", ""),
                             username=username,
                             password=userob.get("password", ""),
-                            email=userob.get("email", ""),
-                            ip=userob.get("ip", None),
-                            hidden=userob.get("hidden", False),
-                            contest=contest)
+                            email=userob.get("email", ""))
                 session.add(user)
+
+            if session.query(Participation).filter(Participation.contest == contest).filter(Participation.user == user).count() == 0:
+                print("Assigning %s to contest"%username)
+                session.add(Participation(contest=contest, user=user, hidden=False, unrestricted=False))
             session.commit()
 
     print("Adding to ranking server")
 
-    RankingUser.store.merge_list(obj["users"])
+    RankingTag.store.load_from_disk()
     RankingTag.store.merge_list(obj["tags"])
+    RankingUser.store.load_from_disk()
+    RankingUser.store.merge_list(obj["users"])
 
     return 0
 

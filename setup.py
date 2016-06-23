@@ -151,6 +151,7 @@ setup(
             "cmsMake=cmstaskenv.cmsMake:main",
             "cmsYamlImporter=cmscompat.YamlImporter:main",
             "cmsYamlReimporter=cmscompat.YamlReimporter:main",
+            "cmsJsonUserImporter=cmscontrib.JsonUserImporter:main",
         ]
     },
     keywords="ioi programming contest grader management system",
