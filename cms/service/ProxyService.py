@@ -413,7 +413,7 @@ class ProxyService(TriggeredService):
                         .join(Submission) \
                         .filter(Submission.timestamp < submission.timestamp) \
                         .filter(Submission.task == submission.task) \
-                        .filter(Submission.user == submission.user).scalar()
+                        .filter(Submission.participation == submission.participation).scalar()
 
                     if previous_score == None:
                         previous_score = 0.0
