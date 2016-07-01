@@ -41,6 +41,7 @@ from cms import utf8_decoder
 from cmsranking import Tag as RankingTag
 from cmsranking import User as RankingUser
 from cms.db import SessionGen, User, Contest, Participation, ask_for_contest
+from cms.service.ProxyService import encode_id
 
 def main():
     """Parse arguments and launch process.
@@ -103,8 +104,13 @@ def main():
 
     RankingTag.store.load_from_disk()
     RankingTag.store.merge_list(obj["tags"])
+
+    encoded_users = {}
+    for username in obj["users"]:
+	encoded_users[encode_id(username)] = obj["users"][username]
+
     RankingUser.store.load_from_disk()
-    RankingUser.store.merge_list(obj["users"])
+    RankingUser.store.merge_list(encoded_users)
 
     return 0
 
