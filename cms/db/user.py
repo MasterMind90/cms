@@ -236,6 +236,11 @@ class Participation(Base):
                         cascade="all, delete-orphan",
                         passive_deletes=True))
 
+    # Last time the user logs in. Useful to know if the user is participating or not
+    last_logged_in = Column(
+        DateTime,
+        nullable=True)
+
     # Follows the description of the fields automatically added by
     # SQLAlchemy.
     # messages (list of Message objects)

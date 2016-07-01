@@ -114,6 +114,9 @@ class LoginHandler(BaseHandler):
             self.redirect("/?login_error=true")
             return
 
+        participation.last_logged_in = make_datetime()
+        self.sql_session.commit()
+        
         logger.info("User logged in: user=%s remote_ip=%s.",
                     filtered_user, self.request.remote_ip)
         self.set_secure_cookie("login",
