@@ -577,7 +577,7 @@ def file_handler_gen(BaseClass):
         """Base class for handlers that need to serve a file to the user.
 
         """
-        def fetch(self, digest, content_type, filename):
+        def fetch(self, digest, content_type, filename, download=False):
             """Send a file from FileCacher by its digest."""
             if digest == "":
                 logger.error("No digest given")
@@ -591,9 +591,9 @@ def file_handler_gen(BaseClass):
                              exc_info=True)
                 self.finish()
                 return
-            self._fetch_temp_file(content_type, filename)
+            self._fetch_temp_file(content_type, filename, download)
 
-        def fetch_from_filesystem(self, filepath, content_type, filename):
+        def fetch_from_filesystem(self, filepath, content_type, filename, download=False):
             """Send a file from filesystem by filepath."""
             try:
                 self.temp_file = io.open(filepath, 'rb')
@@ -602,16 +602,17 @@ def file_handler_gen(BaseClass):
                              exc_info=True)
                 self.finish()
                 return
-            self._fetch_temp_file(content_type, filename)
+            self._fetch_temp_file(content_type, filename, download)
 
-        def _fetch_temp_file(self, content_type, filename):
+        def _fetch_temp_file(self, content_type, filename, download=False):
             """When calling this method, self.temp_file must be a fileobj
             seeked at the beginning of the file.
 
             """
             self.set_header("Content-Type", content_type)
-            self.set_header("Content-Disposition",
-                            "attachment; filename=\"%s\"" % filename)
+            if download:
+                self.set_header("Content-Disposition",
+                                "attachment; filename=\"%s\"" % filename)
             self.start_time = time.time()
             self.size = 0
 
