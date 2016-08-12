@@ -186,17 +186,17 @@ class PolygonTaskLoader(TaskLoader):
             infile_param = judging.attrib['input-file']
             outfile_param = judging.attrib['output-file']
 
-            checker_src = os.path.join(self.path, "files", "check.cpp")
+            checker_src = os.path.join(self.path, "check.cpp")
             if os.path.exists(checker_src):
                 logger.info("Checker found, compiling")
-                checker_exe = os.path.join(self.path, "files", "checker")
+                checker_exe = os.path.join(self.path, "checker")
                 testlib_path = "/usr/local/include/cms/testlib.h"
                 if not config.installed:
                     testlib_path = os.path.join(os.path.dirname(__file__),
                                                 "polygon", "testlib.h")
                 os.system("cat %s | \
                     sed 's$testlib.h$%s$' | \
-                    g++ -x c++ -O2 -static -o %s -" %
+                    g++ -x c++ -O2 -static -std=c++11 -o %s -" %
                           (checker_src, testlib_path, checker_exe))
                 digest = self.file_cacher.put_file_from_path(
                     checker_exe,
