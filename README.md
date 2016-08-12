@@ -20,19 +20,20 @@ Informatics, held in September 2012 in Italy.
 This Branch
 -----------
 
-This branch is a fork of CMS v1.2.0 . It is modified to be used in
+This branch originally is a fork of CMS v1.2.0. It is modified to be used in
 [IIUM Code Jam 2016](http://iiumicpcteam.com/2016/03/iium-code-jam-2016/).
+It is modified mainly to provide an ACM-ICPC-like scoring system, but other
+changes have been implemented as well. Since them, CMS v1.3.0-prealpha
+(of some commit that I don't remember) was merged and more modification was
+made to be used in [Code Knights](http://iiumicpcteam.com/2016/06/code-knights/).
 Among the differences are:
 
-- Some modification on REQUIREMENTS.txt to force lower version of some
-  dependencies so that it could run on newer linux.
 - A score type called ACMICPCApproximate that tries to approximate
   ACM-ICPC style rankings.
 - The scoreboard has minor visual changes when using the
   ACMICPCApproximate score type.
 - A contest freeze time in which submission after that time will have a
   different visual cues on the scoreboard.
-- A page in admin server that list down all submission.
 - A button in admin server that force resending all data to ranking
   server.
 - Does not change the filename internally so that java compilation
