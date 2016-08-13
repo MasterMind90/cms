@@ -39,9 +39,8 @@ Among the differences are:
 - Does not change the filename internally so that java compilation
   works as expected.
 - Added a config to use normal JVM instead of gcj for Java.
-  *Note: The sandbox works strangely with JVM. Using the default
-  jvm_flags, it won't even run if the problem memory limit is set lower
-  than 2GB.*
+  *Note: For the sandbox to work with JVM, the use_cg_memory_limit config
+  needs to be enabled, or you will need to set a very large memory_limit.*
 - Tags support in the ranking web server and the scoreboard can be filtered
   according to tag. For example 'guest' and 'local' flag.
 - It now record stderr and stdout of an evaluation. Available in
