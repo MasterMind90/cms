@@ -5,7 +5,7 @@
 # Copyright © 2010-2013 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
 # Copyright © 2010-2015 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
-# Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
+# Copyright © 2012-2016 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2014 Artem Iglikov <artem.iglikov@gmail.com>
 # Copyright © 2014 Fabian Gundlach <320pointsguy@gmail.com>
 # Copyright © 2016 Myungwoo Chun <mc.tamaki@gmail.com>
@@ -48,7 +48,6 @@ from cms.db import Admin, Contest, Participation, Question, \
     Submission, SubmissionFormatElement, SubmissionResult, Task, Team, User
 from cms.grading.scoretypes import get_score_type_class
 from cms.grading.tasktypes import get_task_type_class
-from cms.io import WebService
 from cms.server import CommonRequestHandler, file_handler_gen, get_url_root
 from cmscommon.datetime import make_datetime
 
@@ -119,18 +118,19 @@ def parse_datetime(value):
         raise ValueError("Can't cast %s to datetime." % value)
 
 
-def parse_ip_address_or_subnet(value):
-    """Validate an IP address or subnet."""
-    address, sep, subnet = value.partition("/")
-    if sep != "":
-        subnet = int(subnet)
-        assert 0 <= subnet < 32
-    fields = address.split(".")
-    assert len(fields) == 4
-    for field in fields:
-        num = int(field)
-        assert 0 <= num < 256
-    return value
+def parse_ip_address_or_subnet(ip_list):
+    """Validate a comma-separated list of IP addresses or subnets."""
+    for value in ip_list.split(","):
+        address, sep, subnet = value.partition("/")
+        if sep != "":
+            subnet = int(subnet)
+            assert 0 <= subnet < 32
+        fields = address.split(".")
+        assert len(fields) == 4
+        for field in fields:
+            num = int(field)
+            assert 0 <= num < 256
+    return ip_list
 
 
 def require_permission(permission="authenticated", self_allowed=False):
@@ -166,7 +166,7 @@ def require_permission(permission="authenticated", self_allowed=False):
 
             user = self.current_user
             permission_key = "permission_%s" % permission
-            if user.permission_all or user.__getattribute__(permission_key):
+            if user.permission_all or getattr(user, permission_key):
                 return func(self, *args, **kwargs)
             else:
                 if self_allowed and len(args) > 0 and int(args[0]) == user.id:
@@ -221,10 +221,8 @@ class BaseHandler(CommonRequestHandler):
             the Admin object, otherwise None.
 
         """
-        admin_id = self.request.headers.get(
-            WebService.AUTHENTICATED_USER_HEADER, None)
+        admin_id = self.service.auth_handler.admin_id
         if admin_id is None:
-            self.set_cookie_action("delete")
             return None
 
         # Load admin.
@@ -233,23 +231,14 @@ class BaseHandler(CommonRequestHandler):
             .filter(Admin.enabled.is_(True))\
             .first()
         if admin is None:
-            self.set_cookie_action("delete")
+            self.service.auth_handler.clear()
             return None
 
         # Maybe refresh the cookie.
         if self.refresh_cookie:
-            self.set_cookie_action("refresh")
+            self.service.auth_handler.refresh()
 
         return admin
-
-    def set_cookie_action(self, action):
-        """Set the header to inform the upper WSGI layer to do the specified
-        action on the login cookie.
-
-        action (unicode): the value of the cookie.
-
-        """
-        self.set_header(WebService.AUTHENTICATED_COOKIE_HEADER, action)
 
     def safe_get_item(self, cls, ident, session=None):
         """Get item from database of class cls and id ident, using

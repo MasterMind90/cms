@@ -109,7 +109,7 @@ class Sum(ScoreTypeAlone):
         """See ScoreType.compute_score."""
         # Actually, this means it didn't even compile!
         if not submission_result.evaluated():
-            return 0.0, "[]", 0.0, "[]", json.dumps([])
+            return 0.0, "[]", 0.0, "[]", []
 
         # XXX Lexicographical order by codename
         indices = sorted(self.public_testcases.keys())
@@ -139,7 +139,7 @@ class Sum(ScoreTypeAlone):
 
         return score, json.dumps(testcases), \
             public_score, json.dumps(public_testcases), \
-            json.dumps([])
+            []
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.
