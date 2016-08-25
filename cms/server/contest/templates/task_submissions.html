@@ -60,8 +60,7 @@ update_submission_row = function (submission_id, data) {
             }
             row.children("td.total_score,td.public_score")
               .removeClass("undefined")
-              .addClass(score_class)
-              .html(data["verdict"]);
+              .addClass(score_class);
         }
     } else if (data["status"] != {{ SubmissionResult.COMPILATION_FAILED }}) {
         schedule_update_submission_row(submission_id);

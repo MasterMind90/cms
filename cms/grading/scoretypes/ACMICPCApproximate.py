@@ -25,8 +25,12 @@ from __future__ import unicode_literals
 
 import json
 import datetime
+import logging
 from cms.db import SessionGen, Submission, SubmissionResult
 from cms.grading.ScoreType import ScoreType
+from cms.grading import format_status_text
+
+logger = logging.getLogger(__name__)
 
 # Dummy function to mark translatable string.
 def N_(message):
@@ -125,6 +129,21 @@ Time Penalty : {{ details["time_penalty"] }}<br />
         score = base
         return score, public_score, []
 
+    @staticmethod
+    def format_score(score, max_score, unused_score_details,
+                     score_precision, unused_translator=None):
+
+        if score > 0:
+            return "Accepted"
+        else:
+            unused_score_details = json.loads(unused_score_details)
+            verdict = "Not Accepted"
+            for testcase in unused_score_details["testcases"]:
+                if testcase["score"] <= 0.0:
+                    verdict = format_status_text(testcase["text"])
+                    break
+            return verdict
+
     def compute_score(self, submission_result):
         """See ScoreType.compute_score."""
         # Actually, this means it didn't even compile!
@@ -149,6 +168,7 @@ Time Penalty : {{ details["time_penalty"] }}<br />
                         has_wrong = True
                     testcases.append({
                         "idx": idx,
+                        "score": this_score,
                         "outcome": tc_outcome,
                         "text": evaluations[idx].text,
                         "time": evaluations[idx].execution_time,
