@@ -366,8 +366,6 @@ def compilation_step(sandbox, commands):
     sandbox.timeout = 10
     sandbox.wallclock_timeout = 20
     sandbox.address_space = 512 * 1024
-    if config.use_jvm:
-        sandbox.address_space *= 10 # For some reason, java require this to be big
     sandbox.stdout_file = "compiler_stdout.txt"
     sandbox.stderr_file = "compiler_stderr.txt"
 
