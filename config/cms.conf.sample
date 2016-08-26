@@ -180,6 +180,8 @@
     "_help": "issue with JVM memory limit, but require swapaccount=1 kernel config",
     "use_cg_memory_limit": false,
 
+    "_help": "Use cg-timing to measure time",
+    "use_cg_timing": true,
 
     "_help": "This is the end of this file."
 }

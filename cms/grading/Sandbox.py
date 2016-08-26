@@ -970,6 +970,8 @@ class IsolateSandbox(SandboxBase):
             res += ["--extra-time=%g" % self.extra_timeout]
         res += ["--meta=%s" % self.relative_path("%s.%d" % (self.info_basename,
                                                             self.exec_num))]
+        if config.use_cg_timing:
+            res += ["--cg-timing"]
         res += ["--run"]
         return res
 
