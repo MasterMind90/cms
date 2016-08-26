@@ -36,12 +36,15 @@ from __future__ import unicode_literals
 import argparse
 import sys
 import json
+import logging
 
-from cms import utf8_decoder
+from cms import utf8_decoder, config
 from cmsranking import Tag as RankingTag
 from cmsranking import User as RankingUser
 from cms.db import SessionGen, User, Contest, Participation, ask_for_contest
-from cms.service.ProxyService import encode_id
+from cms.service.ProxyService import encode_id, safe_put_data, CannotSendError
+
+logger = logging.getLogger(__name__)
 
 def main():
     """Parse arguments and launch process.
@@ -49,6 +52,7 @@ def main():
     """
     parser = argparse.ArgumentParser(
         description="Adds multiple user to a contest in CMS.")
+    parser.add_argument("-s", "--skip-ranking", action="store_true", help="Skip updating ranking server")
     parser.add_argument("-c", "--contest-id", action="store", type=int,
                         help="id of contest where to add the user")
     parser.add_argument("input", type=argparse.FileType('r'), nargs=1,
@@ -60,6 +64,7 @@ def main():
 
     obj = json.load(args.input[0])
 
+    # Preprocess the data
     for key in obj["users"]:
         if "first_name" not in obj["users"][key]:
             obj["users"][key]["first_name"] = obj["users"][key]["name"]
@@ -72,6 +77,7 @@ def main():
         if "tags" not in obj["users"][key]:
             obj["users"][key]["tags"] = []
 
+    # Save it to DB
     with SessionGen() as session:
         contest = Contest.get_from_id(args.contest_id, session)
 
@@ -79,7 +85,7 @@ def main():
             userob = obj["users"][username]
             user = None
             if session.query(User).filter(User.username == username).count() > 0:
-                print("Updating %s "%username)
+                logger.info("Updating %s "%username)
                 user = session.query(User).filter(User.username == username)[0]
                 user.first_name = userob.get("first_name", user.first_name)
                 user.last_name = userob.get("last_name", user.last_name)
@@ -87,7 +93,7 @@ def main():
                 user.password = userob.get("password", user.password)
                 user.email = userob.get("email", user.email)
             else:
-                print("Adding %s "%username)
+                logger.info("Adding %s "%username)
                 user = User(first_name=userob.get("first_name", ""),
                             last_name=userob.get("last_name", ""),
                             username=username,
@@ -96,21 +102,28 @@ def main():
                 session.add(user)
 
             if session.query(Participation).filter(Participation.contest == contest).filter(Participation.user == user).count() == 0:
-                print("Assigning %s to contest"%username)
+                logger.info("Assigning %s to contest"%username)
                 session.add(Participation(contest=contest, user=user, hidden=False, unrestricted=False))
             session.commit()
 
-    print("Adding to ranking server")
+    if not args.skip_ranking:
+        # Encode keys
+        logger.warn("Updating ranking servers.")
+        encoded_users = {}
+        for username in obj["users"]:
+            encoded_users[encode_id(username)] = obj["users"][username]
+        encoded_tags = {}
+        for tag in obj["tags"]:
+            encoded_tags[encode_id(tag)] = obj["tags"][tag]
 
-    RankingTag.store.load_from_disk()
-    RankingTag.store.merge_list(obj["tags"])
-
-    encoded_users = {}
-    for username in obj["users"]:
-	encoded_users[encode_id(username)] = obj["users"][username]
-
-    RankingUser.store.load_from_disk()
-    RankingUser.store.merge_list(encoded_users)
+        # Send it to rankings
+        for ranking in config.rankings:
+            url = ranking.encode('utf-8')
+            try:
+                safe_put_data(url, "users/", encoded_users, "Manual put users to %s"%ranking)
+                safe_put_data(url, "tags/", encoded_tags, "Manual put tags to %s"%ranking)
+            except CannotSendError as e:
+                logger.warn("Error updating ranking server: %s"%e)
 
     return 0
 
