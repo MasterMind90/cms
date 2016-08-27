@@ -62,7 +62,7 @@
         <td>
           {% if p.last_logged_in == None %}
           {% else %}
-            {% if (p.last_logged_in - contest.start) > timedelta(hours=1) %}
+            {% if (p.last_logged_in - contest.start) > timedelta(hours=-1) %}
             <strong>{{ p.last_logged_in }}</strong>
             {% else %}
             {{ p.last_logged_in }}
