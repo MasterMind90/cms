@@ -222,7 +222,7 @@ Time Penalty : {{ details["time_penalty"] }}<br />
 
             return score, json.dumps(details), \
                 public_score, json.dumps(public_details), \
-                json.dumps([json.dumps(to_rws)])
+                [json.dumps(to_rws)]
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.
