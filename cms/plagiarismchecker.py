@@ -16,6 +16,7 @@ def calculate_plagiarism(submission, session, file_cacher):
                 .order_by(Submission.id) \
                 .filter(Participation.contest_id == submission.participation.contest_id) \
                 .filter(Submission.participation_id != submission.participation_id) \
+                .filter(Submission.timestamp < submission.timestamp) \
                 .filter(Submission.task_id == submission.task_id)
 
     highest_ratio = 0
