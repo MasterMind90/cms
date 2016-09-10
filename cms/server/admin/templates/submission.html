@@ -256,17 +256,23 @@
 <div id="plagiarism" style="display: none;">
   {% if s.plagiarism_check_details != None %}
   {% set decoded = json.loads(s.plagiarism_check_details) %}
-  <table>
-    <tr>
-      <th>Username</th>
-      <th>Ratio</th>
-    </tr>
-    {% for username in decoded.keys() %}
+  <table class="bordered">
+    <thead>
       <tr>
-        <th>{{ username }}</th>
-        <th>{{ decoded[username] }}</th>
+        <th>Submission ID</th>
+        <th>Username</th>
+        <th>Ratio</th>
       </tr>
-    {% end %}
+    </thead>
+    <tbody>
+      {% for row in decoded %}
+        <tr>
+          <td><a href="/submission/{{ row["submission_id"] }}">{{ row["submission_timestamp"] }}</a></td>
+          <td><a href="/contest/{{ s.participation.contest_id }}/user/{{ row["user_id"] }}">{{ row["username"] }}</a></td>
+          <td>{{ row["ratio"] }}</td>
+        </tr>
+      {% end %}
+    </tbody>
   </table>
   {% end %}
 </div>

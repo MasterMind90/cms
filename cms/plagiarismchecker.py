@@ -20,7 +20,7 @@ def calculate_plagiarism(submission, session, file_cacher):
 
     highest_ratio = 0
     submission.plagiarism_check_result = "No submission to compare"
-    details = {}
+    details = []
 
     # The matcher caches information about the second sequence
     # With this, it should be faster
@@ -37,11 +37,13 @@ def calculate_plagiarism(submission, session, file_cacher):
         if ratio > highest_ratio:
             highest_ratio = ratio
             submission.plagiarism_check_result = "%.2f against %s"%(ratio, username)
-        if username in details:
-            if ratio > details[username]:
-                details[username] = ratio
-        else:
-            details[username] = ratio
+        details.append({
+            "submission_timestamp" : str(sub.timestamp),
+            "submission_id" : sub.id,
+            "username" : username,
+            "user_id" : sub.participation.user_id,
+            "ratio" : ratio
+        })
 
     submission.plagiarism_check_details = json.dumps(details, sort_keys=True,
         indent=4, separators=(',', ': '))
