@@ -2,6 +2,8 @@
 
 {% block core %}
 {% from datetime import timedelta %}
+{% from cmscommon.datetime import make_datetime %}
+{% import humanize %}
 <div class="core_title">
   <h1>Users list</h1>
 </div>
@@ -62,10 +64,12 @@
         <td>
           {% if p.last_logged_in == None %}
           {% else %}
-            {% if (p.last_logged_in - contest.start) > timedelta(hours=1) %}
-            <strong>{{ p.last_logged_in }}</strong>
-            {% else %}
-            {{ p.last_logged_in }}
+            {% if (p.last_logged_in - contest.start) > timedelta(hours=-1) %}
+            <strong>
+            {% end %}
+            {{ p.last_logged_in }} ({{ humanize.naturaltime(make_datetime() - p.last_logged_in) }})
+            {% if (p.last_logged_in - contest.start) > timedelta(hours=-1) %}
+            </strong>
             {% end %}
           {% end %}
         </td>
