@@ -95,6 +95,17 @@ class Submission(Base):
         nullable=False,
         default="")
 
+    # A summary of result for plagiarism check
+    plagiarism_check_result = Column(
+        Unicode,
+        nullable=True)
+
+    # Details of the plagiarism check
+    # Contain a hash of problem id and percentage
+    plagiarism_check_details = Column(
+        Unicode,
+        nullable=True)
+
     @property
     def short_comment(self):
         """The first line of the comment."""
