@@ -37,3 +37,20 @@
         disabled
 {% end %}
         title="Score" >S</button>
+
+<button onclick="cmsrpc_request('{{ url_root }}',
+                 'EvaluationService', 0,
+                 'recalculate_plagiarism_result', {
+{% for key, value in invalidate_arguments.items() %}
+                {% if key == 'label' %}
+                  {% continue %}
+                {% end %}
+                 '{{ key }}': {{ value }},
+{% end %}
+                 },
+                 function(response) { utils.redirect_if_ok('{{ url }}', response); }
+                 );"
+{% if not current_user.permission_all %}
+        disabled
+{% end %}
+        title="Plagiarism" >P</button>

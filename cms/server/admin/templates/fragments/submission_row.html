@@ -111,6 +111,9 @@
     {{ s.short_comment }}
   </td>
   <td>
+    {{ s.plagiarism_check_result }}
+  </td>
+  <td>
     {% module ReevaluationButtons(
            url_root,
            submission_id=s.id,

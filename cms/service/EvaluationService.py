@@ -47,6 +47,7 @@ from cms import ServiceCoord, get_service_shards
 from cms.io import Executor, TriggeredService, rpc_method
 from cms.db import SessionGen, Dataset, Submission, \
     SubmissionResult, Task, UserTest
+from cms.db.filecacher import FileCacher
 from cms.service import get_datasets_to_judge, \
     get_submissions, get_submission_results
 from cms.grading.Job import Job
@@ -56,6 +57,7 @@ from .esoperations import ESOperation, get_relevant_operations, \
     submission_get_operations, submission_to_evaluate, \
     user_test_get_operations
 from .workerpool import WorkerPool
+from cms.plagiarismchecker import calculate_plagiarism
 
 
 logger = logging.getLogger(__name__)
@@ -857,6 +859,48 @@ class EvaluationService(TriggeredService):
             self.user_test_enqueue_operations(user_test)
 
             session.commit()
+
+    @rpc_method
+    @with_post_finish_lock
+    def recalculate_plagiarism_result(self,
+                              contest_id=None,
+                              submission_id=None,
+                              dataset_id=None,
+                              participation_id=None,
+                              task_id=None):
+        """Recalculate plagiarism result of the submissions.
+        WARNING: Doing things in a single blocking thread.
+
+        submission_id (int|None): id of the submission to recalculate,
+            or None.
+        dataset_id (int|None): id of the dataset to recalculate, or
+            None.
+        participation_id (int|None): id of the participation to
+            recalculate, or None.
+        task_id (int|None): id of the task to recalculate, or None.
+
+        """
+        logger.info("Recalculate plagiarims request received.")
+
+        if contest_id is None:
+            contest_id = self.contest_id
+
+        with SessionGen() as session:
+            # First we load all involved submissions.
+            submissions = get_submissions(
+                # Give contest_id only if all others are None.
+                contest_id
+                if {participation_id, task_id, submission_id} == {None}
+                else None,
+                participation_id, task_id, submission_id, session)
+
+            file_cacher = FileCacher(self)
+
+            for submission in submissions:
+                calculate_plagiarism(submission, session, file_cacher)
+
+            session.commit()
+
 
     @rpc_method
     @with_post_finish_lock

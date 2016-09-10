@@ -98,7 +98,8 @@ class Submission(Base):
     # A summary of result for plagiarism check
     plagiarism_check_result = Column(
         Unicode,
-        nullable=True)
+        nullable=True,
+        default="Uncompared")
 
     # Details of the plagiarism check
     # Contain a hash of problem id and percentage

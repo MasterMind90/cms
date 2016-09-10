@@ -75,6 +75,16 @@
         </td>
       </tr>
       <tr>
+        <td>Plagiarism Result</td>
+        <td>
+          {% if s.plagiarism_check_result is None %}
+            Uncompared
+          {% else %}
+            {{ s.plagiarism_check_result }}
+          {% end %}
+        </td>
+      </tr>
+      <tr>
         <td>Status</td>
         <td id="submission_status">
           {% if status == SubmissionResult.COMPILING %}
@@ -240,6 +250,25 @@
   <h3>Standard error</h3>
   <pre>{% if sr.compilation_stderr is not None %}{{ sr.compilation_stderr }}{% end %}</pre>
 
+</div>
+
+<h2 id="title_plagiarism" class="toggling_off">Plagiarim Check Details</h2>
+<div id="plagiarism" style="display: none;">
+  {% if s.plagiarism_check_details != None %}
+  {% set decoded = json.loads(s.plagiarism_check_details) %}
+  <table>
+    <tr>
+      <th>Username</th>
+      <th>Ratio</th>
+    </tr>
+    {% for username in decoded.keys() %}
+      <tr>
+        <th>{{ username }}</th>
+        <th>{{ decoded[username] }}</th>
+      </tr>
+    {% end %}
+  </table>
+  {% end %}
 </div>
 
   {% end %}
