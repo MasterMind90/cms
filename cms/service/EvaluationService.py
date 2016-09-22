@@ -58,7 +58,7 @@ from .esoperations import ESOperation, get_relevant_operations, \
     user_test_get_operations
 from .workerpool import WorkerPool
 from cms.plagiarismchecker import calculate_plagiarism
-
+from threading import Thread, Lock
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +217,8 @@ class EvaluationService(TriggeredService):
                          EvaluationService.WORKER_CONNECTION_CHECK_TIME
                          .total_seconds(),
                          immediately=False)
+
+        self.plagiarism_check_lock = Lock()
 
     def submission_enqueue_operations(self, submission):
         """Push in queue the operations required by a submission.
@@ -829,6 +831,11 @@ class EvaluationService(TriggeredService):
         """
         with SessionGen() as session:
             submission = Submission.get_from_id(submission_id, session)
+
+            # Check for plagiarism here.
+            # WARNING: This will compare it with (almost) all previous submission
+            self.recalculate_plagiarism_result(submission_id=submission_id)
+
             if submission is None:
                 logger.error("[new_submission] Couldn't find submission "
                              "%d in the database.", submission_id)
@@ -869,7 +876,8 @@ class EvaluationService(TriggeredService):
                               participation_id=None,
                               task_id=None):
         """Recalculate plagiarism result of the submissions.
-        WARNING: Doing things in a single blocking thread.
+        WARNING: Doing things in a separate thread. This may take
+        cpu time away from workers, or this server.
 
         submission_id (int|None): id of the submission to recalculate,
             or None.
@@ -885,22 +893,29 @@ class EvaluationService(TriggeredService):
         if contest_id is None:
             contest_id = self.contest_id
 
-        with SessionGen() as session:
-            # First we load all involved submissions.
-            submissions = get_submissions(
-                # Give contest_id only if all others are None.
-                contest_id
-                if {participation_id, task_id, submission_id} == {None}
-                else None,
-                participation_id, task_id, submission_id, session)
+        def do_check():
 
-            file_cacher = FileCacher(self)
+            # Prevent more than one thread doing the plagiarism check
+            with self.plagiarism_check_lock:
+                with SessionGen() as session:
+                    # First we load all involved submissions.
 
-            for submission in submissions:
-                calculate_plagiarism(submission, session, file_cacher)
+                    submissions = get_submissions(
+                        # Give contest_id only if all others are None.
+                        contest_id
+                        if {participation_id, task_id, submission_id} == {None}
+                        else None,
+                        participation_id, task_id, submission_id, session)
 
-            session.commit()
+                    file_cacher = FileCacher(self)
 
+                    for submission in submissions:
+                        calculate_plagiarism(submission, session, file_cacher)
+
+                    session.commit()
+
+        # Run in a separate thread
+        Thread(target=do_check).start()
 
     @rpc_method
     @with_post_finish_lock

@@ -2,8 +2,13 @@ from difflib import SequenceMatcher
 from cms.db.submission import Submission, File
 from cms.db.user import Participation
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 def calculate_plagiarism(submission, session, file_cacher):
+    logger.info("Plagiarism check on submission id %s"%submission.id)
+    
     submission.plagiarism_check_result = None
     submission.plagiarism_check_details = None
 
