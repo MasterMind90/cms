@@ -59,6 +59,10 @@ class Config(object):
         self.username = 'usern4me'
         self.password = 'passw0rd'
 
+        # Filter stuff
+        self.user_whitelist = None
+        self.user_blacklist = None
+
         # UI stuff
         self.show_team = True
         self.first_name_is_name = False

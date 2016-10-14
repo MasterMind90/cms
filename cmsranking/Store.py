@@ -246,7 +246,7 @@ class Store(object):
                 except InvalidData as exc:
                     exc.message = "[entity %s] %s" % (key, exc)
                     exc.args = exc.message,
-                    raise exc
+                    logger.error(exc, exc_info=True)
 
             for key, value in item_dict.iteritems():
                 is_new = key not in self._store
