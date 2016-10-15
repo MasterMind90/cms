@@ -26,6 +26,7 @@ import six
 from cmsranking.Entity import Entity, InvalidData
 from cmsranking.Store import Store
 from cmsranking.Submission import store as submission_store
+from cmsranking.Config import config
 
 class User(Entity):
     """The entity representing a user.
