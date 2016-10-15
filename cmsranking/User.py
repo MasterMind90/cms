@@ -46,59 +46,6 @@ class User(Entity):
         self.team = None
         self.tags = []
 
-    def match(self, description):
-        data = dict((key, getattr(self, key)) for key in dir(self) if key not in dir(self.__class__))
-        for key in description:
-            value = description[key]
-            if key not in data or data[key] is None:
-                # Key does not exist. Does not match.
-                return False
-            else:
-                if isinstance(data[key], list):
-                    dataset = set(data[key])
-                    if not isinstance(value, list):
-                        value = [value]
-
-                    matched = False
-                    # Check if any of the value match
-                    for val in value:
-                        if isinstance(val, list):
-                            # Then all val must match
-                            if dataset.issuperset(set(val)):
-                                matched = True
-                                break
-                        else:
-                            if val in dataset:
-                                matched = True
-                                break
-
-                    if not matched:
-                        return False
-                else:
-                    if not isinstance(value, list):
-                        value = [value]
-
-                    matched = False
-                    # Check if any of the value match
-                    for val in value:
-                        if val == data[key]:
-                            matched = True
-                            break
-
-                    if not matched:
-                        return False
-
-        return True
-
-    def filtered(self):
-        if config.user_whitelist != None:
-            if not self.match(config.user_whitelist):
-                raise InvalidData("Record does not match whitelist")
-        if config.user_blacklist != None:
-            if self.match(config.user_blacklist):
-                raise InvalidData("Record match blacklist")
-        return False
-
     @staticmethod
     def validate(data):
         """Validate the given dictionary.
@@ -122,13 +69,11 @@ class User(Entity):
             raise InvalidData(exc.message)
 
     def set(self, data):
-        self.validate(data)
         self.f_name = data['f_name']
         self.l_name = data['l_name']
         self.team = data['team']
         if 'tags' in data:
             self.tags = data['tags']
-        self.filtered()
 
     def get(self):
         result = self.__dict__.copy()

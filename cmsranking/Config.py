@@ -139,6 +139,8 @@ class Config(object):
         """
         return {
             "show_team": self.show_team,
+            "user_blacklist": self.user_blacklist,
+            "user_whitelist": self.user_whitelist,
             "first_name_is_name": self.first_name_is_name
         }
 
