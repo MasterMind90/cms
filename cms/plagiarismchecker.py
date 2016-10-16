@@ -3,17 +3,34 @@ from cms.db.submission import Submission, File
 from cms.db.user import Participation
 import json
 import logging
+import re
+from cms.conf import config
 
 logger = logging.getLogger(__name__)
 
+comment_re = re.compile(r'(//.*|/\*[\s\S]*?\*/)', re.MULTILINE)
+preprocessor_re = re.compile(r'#.*', re.MULTILINE)
+whitespace_re = re.compile(r'\s', re.MULTILINE)
+
+def clean_text(text):
+    if config.plagiarism_ignore_preprocessor:
+        text = preprocessor_re.sub('', text)
+    if config.plagiarism_ignore_comments:
+        text = comment_re.sub('', text)
+    if config.plagiarism_ignore_whitespace:
+        text = whitespace_re.sub('', text)
+    return text
+
+
 def calculate_plagiarism(submission, session, file_cacher):
     logger.info("Plagiarism check on submission id %s"%submission.id)
-    
+
     submission.plagiarism_check_result = None
     submission.plagiarism_check_details = None
 
     digest_a = session.query(File).filter(File.submission == submission).first().digest
     base_string = file_cacher.get_file_content(digest_a)
+    base_string = clean_text(base_string)
 
     # Find submissions of the same task from other
     # participation
@@ -35,6 +52,7 @@ def calculate_plagiarism(submission, session, file_cacher):
     for sub in query:
         digest_b = session.query(File).filter(File.submission == sub).first().digest
         compare_string = file_cacher.get_file_content(digest_b)
+        compare_string = clean_text(compare_string)
 
         matcher.set_seq1(compare_string)
         ratio = matcher.ratio()

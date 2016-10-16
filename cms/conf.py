@@ -77,6 +77,10 @@ class Config(object):
         self.use_jvm = False # Use normal JVM instead of gcj
         self.jvm_flags = [] # For java execution
 
+        self.plagiarism_ignore_whitespace = True
+        self.plagiarism_ignore_preprocessor = True
+        self.plagiarism_ignore_comments = True
+
         # Sandbox.
         self.max_file_size = 1048576
         self.use_cg_timing = True
