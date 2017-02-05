@@ -43,9 +43,9 @@
       <tr>
         <td>Files</td>
         <td>
-          {% if config.dont_change_source_filename %}
-            {% for filename in s.files %}
-              {% set real_filename = filename if s.language is None else filename.replace("%l", s.language) %}
+          {% for filename in (config.dont_change_source_filename && s.files || [x.filename for x in s.task.submission_format]) %}
+            {% if filename in s.files %}
+              {% set real_filename = filename if s.language is None else filename.replace(".%l", get_language(s.language).source_extension) %}
           <a href="javascript:void(0);" onclick="utils.show_file('{{ real_filename }}','{{ url_root }}/submission_file/{{ s.files[filename].id }}')">
             {{ real_filename }}
           </a>
@@ -63,6 +63,15 @@
             {% end %}
           {% end %}
         </td>
+      </tr>
+      <tr>
+        <td>Language</td>
+        <td>
+          {% if s.language is None %}
+          N/A
+          {% else %}
+          {{ s.language }}
+          {% end %}
       </tr>
       <tr>
         <td>Token</td>
