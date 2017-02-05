@@ -99,6 +99,12 @@ class Contest(Base):
         nullable=False,
         default=True)
 
+    # Whether to
+    allow_all_submissions = Column(
+        Boolean,
+        nullable=False,
+        default=False)
+
     # Whether to prevent hidden participations to log in.
     block_hidden_participations = Column(
         Boolean,
@@ -190,7 +196,7 @@ class Contest(Base):
         DateTime,
         nullable=False,
         default=datetime(2100, 01, 01))
-        
+
     freeze_time = Column(
         DateTime,
         nullable=False,

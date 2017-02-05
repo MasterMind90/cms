@@ -491,7 +491,6 @@ class EvaluationJob(Job):
             'plus': self.plus,
             'only_execution': self.only_execution,
             'get_output': self.get_output,
-from cms import config
             'get_error': self.get_error,
             })
         return res

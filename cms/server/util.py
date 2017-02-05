@@ -193,7 +193,7 @@ def actual_phase_required(*actual_phases):
         def wrapped(self, *args, **kwargs):
             if self.r_params["actual_phase"] not in actual_phases and \
                     (self.current_user is None or
-                     not self.current_user.unrestricted):
+                    not (self.current_user.unrestricted or self.contest.allow_all_submissions)):
                 # TODO maybe return some error code?
                 self.redirect("/")
             else:

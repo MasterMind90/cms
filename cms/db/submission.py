@@ -169,6 +169,9 @@ class Submission(Base):
         """
         return self.token is not None
 
+    def within_contest(self):
+        contest = self.task.contest
+        return self.timestamp >= contest.start and self.timestamp <= contest.stop
 
 class File(Base):
     """Class to store information about one file submitted within a

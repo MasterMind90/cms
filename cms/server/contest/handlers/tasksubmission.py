@@ -104,7 +104,7 @@ class SubmitHandler(BaseHandler):
                     .filter(Submission.participation == participation)\
                     .scalar()
                 if submission_c >= contest.max_submission_number and \
-                        not self.current_user.unrestricted:
+                        not (self.current_user.unrestricted or contest.allow_all_submissions):
                     raise ValueError(
                         self._("You have reached the maximum limit of "
                                "at most %d submissions among all tasks.") %
@@ -116,7 +116,7 @@ class SubmitHandler(BaseHandler):
                     .filter(Submission.participation == participation)\
                     .scalar()
                 if submission_t >= task.max_submission_number and \
-                        not self.current_user.unrestricted:
+                        not (self.current_user.unrestricted or contest.allow_all_submissions):
                     raise ValueError(
                         self._("You have reached the maximum limit of "
                                "at most %d submissions on this task.") %
@@ -138,7 +138,7 @@ class SubmitHandler(BaseHandler):
                 if last_submission_c is not None and \
                         self.timestamp - last_submission_c.timestamp < \
                         contest.min_submission_interval and \
-                        not self.current_user.unrestricted:
+                        not (self.current_user.unrestricted or contest.allow_all_submissions):
                     raise ValueError(
                         self._("Among all tasks, you can submit again "
                                "after %d seconds from last submission.") %
@@ -155,7 +155,7 @@ class SubmitHandler(BaseHandler):
                 if last_submission_t is not None and \
                         self.timestamp - last_submission_t.timestamp < \
                         task.min_submission_interval and \
-                        not self.current_user.unrestricted:
+                        not (self.current_user.unrestricted or contest.allow_all_submissions):
                     raise ValueError(
                         self._("For this task, you can submit again "
                                "after %d seconds from last submission.") %
