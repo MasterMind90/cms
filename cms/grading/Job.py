@@ -43,9 +43,23 @@ import logging
 
 from cms.db import File, Manager, Executable, UserTestExecutable, Evaluation
 from cms import config
+from cms.grading.languagemanager import get_language
 from cms.service.esoperations import ESOperation
 
 logger = logging.getLogger(__name__)
+
+def _is_contest_multithreaded(contest):
+    """Return if the contest allows multithreaded compilations and evaluations
+
+    The rule is that this is allowed when the contest has a language that
+    requires this.
+
+    contest (Contest): the contest to check
+    return (boolean): True if the sandbox should allow multithreading.
+
+    """
+    return any(get_language(l).requires_multithreading
+               for l in contest.languages)
 
 class Job(object):
     """Base class for all jobs.
@@ -57,7 +71,8 @@ class Job(object):
 
     def __init__(self, operation=None,
                  task_type=None, task_type_parameters=None,
-                 language=None, shard=None, sandboxes=None, info=None,
+                 language=None, multithreaded_sandbox=False,
+                 shard=None, sandboxes=None, info=None,
                  success=None, text=None,
                  files=None, managers=None, executables=None):
         """Initialization.
@@ -69,6 +84,8 @@ class Job(object):
             creation of the correct task type.
         language (string|None): the language of the submission / user
             test.
+        multithreaded_sandbox (boolean): whether the sandbox should
+            allow multithreading.
         shard (int|None): the shard of the Worker completing this job.
         sandboxes ([string]|None): the paths of the sandboxes used in
             the Worker during the execution of the job.
@@ -106,6 +123,7 @@ class Job(object):
         self.task_type = task_type
         self.task_type_parameters = task_type_parameters
         self.language = language
+        self.multithreaded_sandbox = multithreaded_sandbox
         self.shard = shard
         self.sandboxes = sandboxes
         self.info = info
@@ -124,6 +142,7 @@ class Job(object):
             'task_type': self.task_type,
             'task_type_parameters': self.task_type_parameters,
             'language': self.language,
+            'multithreaded_sandbox': self.multithreaded_sandbox,
             'shard': self.shard,
             'sandboxes': self.sandboxes,
             'info': self.info,
@@ -221,7 +240,8 @@ class CompilationJob(Job):
     def __init__(self, operation=None, task_type=None,
                  task_type_parameters=None,
                  shard=None, sandboxes=None, info=None,
-                 language=None, files=None, managers=None,
+                 language=None, multithreaded_sandbox=False,
+                 files=None, managers=None,
                  success=None, compilation_success=None,
                  executables=None, text=None, plus=None):
         """Initialization.
@@ -235,7 +255,8 @@ class CompilationJob(Job):
         """
 
         Job.__init__(self, operation, task_type, task_type_parameters,
-                     language, shard, sandboxes, info, success, text,
+                     language, multithreaded_sandbox,
+                     shard, sandboxes, info, success, text,
                      files, managers, executables)
         self.compilation_success = compilation_success
         self.plus = plus
@@ -277,6 +298,8 @@ class CompilationJob(Job):
                          "but the operation is %s.", operation.type_)
             raise ValueError("Operation is not a compilation")
 
+        multithreaded = _is_contest_multithreaded(submission.task.contest)
+
         # dict() is required to detach the dictionary that gets added
         # to the Job from the control of SQLAlchemy
         return CompilationJob(
@@ -284,6 +307,7 @@ class CompilationJob(Job):
             task_type=dataset.task_type,
             task_type_parameters=dataset.task_type_parameters,
             language=submission.language,
+            multithreaded_sandbox=multithreaded,
             files=dict(submission.files),
             managers=dict(dataset.managers),
             info="compile submission %d" % (submission.id)
@@ -333,6 +357,8 @@ class CompilationJob(Job):
                          operation.type_)
             raise ValueError("Operation is not a user test compilation")
 
+        multithreaded = _is_contest_multithreaded(user_test.task.contest)
+
         # Add the managers to be got from the Task; get_task_type must
         # be imported here to avoid circular dependencies
         from cms.grading.tasktypes import get_task_type
@@ -356,6 +382,7 @@ class CompilationJob(Job):
             task_type=dataset.task_type,
             task_type_parameters=dataset.task_type_parameters,
             language=user_test.language,
+            multithreaded_sandbox=multithreaded,
             files=dict(user_test.files),
             managers=managers,
             info="compile user test %d" % (user_test.id)
@@ -405,7 +432,8 @@ class EvaluationJob(Job):
     def __init__(self, operation=None, task_type=None,
                  task_type_parameters=None, shard=None,
                  sandboxes=None, info=None,
-                 language=None, files=None, managers=None, executables=None,
+                 language=None, multithreaded_sandbox=False,
+                 files=None, managers=None, executables=None,
                  input=None, output=None,
                  time_limit=None, memory_limit=None,
                  success=None, outcome=None, text=None,
@@ -434,7 +462,8 @@ class EvaluationJob(Job):
 
         """
         Job.__init__(self, operation, task_type, task_type_parameters,
-                     language, shard, sandboxes, info, success, text,
+                     language, multithreaded_sandbox,
+                     shard, sandboxes, info, success, text,
                      files, managers, executables)
         self.input = input
         self.output = output
@@ -462,6 +491,7 @@ class EvaluationJob(Job):
             'plus': self.plus,
             'only_execution': self.only_execution,
             'get_output': self.get_output,
+from cms import config
             'get_error': self.get_error,
             })
         return res
@@ -494,6 +524,8 @@ class EvaluationJob(Job):
                          "but the operation is %s.", operation.type_)
             raise ValueError("Operation is not an evaluation")
 
+        multithreaded = _is_contest_multithreaded(submission.task.contest)
+
         submission_result = submission.get_result(dataset)
         # This should have been created by now.
         assert submission_result is not None
@@ -510,6 +542,7 @@ class EvaluationJob(Job):
             task_type=dataset.task_type,
             task_type_parameters=dataset.task_type_parameters,
             language=submission.language,
+            multithreaded_sandbox=multithreaded,
             files=dict(submission.files),
             managers=dict(dataset.managers),
             executables=dict(submission_result.executables),
@@ -564,6 +597,8 @@ class EvaluationJob(Job):
                          operation.type_)
             raise ValueError("Operation is not a user test evaluation")
 
+        multithreaded = _is_contest_multithreaded(user_test.task.contest)
+
         user_test_result = user_test.get_result(dataset)
         # This should have been created by now.
         assert user_test_result is not None
@@ -591,6 +626,7 @@ class EvaluationJob(Job):
             task_type=dataset.task_type,
             task_type_parameters=dataset.task_type_parameters,
             language=user_test.language,
+            multithreaded_sandbox=multithreaded,
             files=dict(user_test.files),
             managers=managers,
             executables=dict(user_test_result.executables),

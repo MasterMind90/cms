@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 #
@@ -110,7 +110,7 @@ class Batch(TaskType):
         source_filenames = []
         # If a grader is specified, we add to the command line (and to
         # the files to get) the corresponding manager.
-        if self.parameters[0] == "grader":
+        if self._uses_grader():
             source_filenames.append("grader.%%l")
         source_filenames.append(submission_format[0])
         executable_filename = submission_format[0].replace(".%l", "")
@@ -129,6 +129,9 @@ class Batch(TaskType):
     def get_auto_managers(self):
         """See TaskType.get_auto_managers."""
         return None
+
+    def _uses_grader(self):
+        return self.parameters[0] == "grader"
 
     def compile(self, job, file_cacher):
         """See TaskType.compile."""
@@ -151,7 +154,7 @@ class Batch(TaskType):
             return True
 
         # Create the sandbox
-        sandbox = create_sandbox(file_cacher)
+        sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
         job.sandboxes.append(sandbox.path)
 
         # Prepare the source files in the sandbox
@@ -164,7 +167,7 @@ class Batch(TaskType):
         # If a grader is specified, we add to the command line (and to
         # the files to get) the corresponding manager. The grader must
         # be the first file in source_filenames.
-        if self.parameters[0] == "grader":
+        if self._uses_grader():
             source_filenames.insert(0, "grader%s" % source_ext)
             files_to_get["grader%s" % source_ext] = \
                 job.managers["grader%s" % source_ext].digest
@@ -207,17 +210,19 @@ class Batch(TaskType):
                 Executable(executable_filename, digest)
 
         # Cleanup
-        delete_sandbox(sandbox)
+        delete_sandbox(sandbox, job.success)
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
         # Create the sandbox
-        sandbox = create_sandbox(file_cacher)
+        sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
 
         # Prepare the execution
         executable_filename = job.executables.keys()[0]
         language = get_language(job.language)
-        commands = language.get_evaluation_commands(executable_filename)
+        commands = language.get_evaluation_commands(
+            executable_filename,
+            main="grader" if self._uses_grader() else executable_filename)
         executables_to_get = {
             executable_filename:
             job.executables[executable_filename].digest
@@ -380,4 +385,4 @@ class Batch(TaskType):
         job.outcome = "%s" % outcome if outcome is not None else None
         job.text = text
 
-        delete_sandbox(sandbox)
+        delete_sandbox(sandbox, job.success)

@@ -195,15 +195,18 @@ class SandboxBase(object):
     EXIT_SYSCALL = 'syscall'
     EXIT_NONZERO_RETURN = 'nonzero return'
 
-    def __init__(self, file_cacher, temp_dir=None):
+    def __init__(self, multithreaded, file_cacher, temp_dir=None):
         """Initialization.
 
+        multithreaded (boolean): whether the sandbox should allow
+            multithreading.
         file_cacher (FileCacher): an instance of the FileCacher class
             (to interact with FS), if the sandbox needs it.
         temp_dir (unicode|None): temporary directory to use; if None, use the
             default temporary directory specified in the configuration.
 
         """
+        self.multithreaded = multithreaded
         self.file_cacher = file_cacher
         self.temp_dir = temp_dir if temp_dir is not None else config.temp_dir
 
@@ -218,8 +221,12 @@ class SandboxBase(object):
         self.preserve_env = False
         self.inherit_env = []
         self.set_env = {}
-        self.max_processes = 1
         self.verbosity = 0
+
+        self.max_processes = 1
+        if multithreaded:
+            # Max processes is set to 1000 to limit the effect of fork bombs.
+            self.max_processes = 1000
 
         # Set common environment variables.
         # Specifically needed by Python, that searches the home for
@@ -451,13 +458,13 @@ class StupidSandbox(SandboxBase):
 
     """
 
-    def __init__(self, file_cacher, temp_dir=None):
+    def __init__(self, multithreaded, file_cacher, temp_dir=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
 
         """
-        SandboxBase.__init__(self, file_cacher, temp_dir)
+        SandboxBase.__init__(self, multithreaded, file_cacher, temp_dir)
 
         # Make box directory
         self.path = tempfile.mkdtemp(dir=self.temp_dir)
@@ -755,13 +762,18 @@ class IsolateSandbox(SandboxBase):
     """
     next_id = 0
 
-    def __init__(self, file_cacher, temp_dir=None):
+    # If the command line starts with this command name, we are just
+    # going to execute it without sandboxing, and with all permissions
+    # on the current directory.
+    SECURE_COMMANDS = ["/bin/cp", "/bin/mv", "/usr/bin/zip", "/usr/bin/unzip"]
+
+    def __init__(self, multithreaded, file_cacher, temp_dir=None):
         """Initialization.
 
         For arguments documentation, see SandboxBase.__init__.
 
         """
-        SandboxBase.__init__(self, file_cacher, temp_dir)
+        SandboxBase.__init__(self, multithreaded, file_cacher, temp_dir)
 
         # Isolate only accepts ids between 0 and 99. We assign the
         # range [(shard+1)*10, (shard+2)*10) to each Worker and keep
@@ -813,7 +825,6 @@ class IsolateSandbox(SandboxBase):
         self.stack_space = None        # -k
         self.address_space = None      # -m
         self.stdout_file = None        # -o
-        self.max_processes = 1         # -p
         self.stderr_file = None        # -r
         self.timeout = None            # -t
         self.verbosity = 0             # -v
@@ -1180,29 +1191,6 @@ class IsolateSandbox(SandboxBase):
         """
         return os.path.join(self.inner_temp_dir, path)
 
-    # XXX - Temporarily disabled (i.e., set as private), in order to
-    # ease interface while implementing other sandboxes, since it's
-    # not used; anyway, it should probably factored through _popen in
-    # order to avoid code duplication
-    def _execute(self, command):
-        """Execute the given command in the sandbox.
-
-        command (list): executable filename and arguments of the
-                        command.
-
-        return (bool): True if the sandbox didn't report errors
-                       (caused by the sandbox itself), False otherwise
-
-        """
-        self.exec_num += 1
-        self.log = None
-        args = [self.box_exec] + self.build_box_options() + ["--"] + command
-        logger.debug("Executing program in sandbox with command: `%s'.",
-                     pretty_print_cmdline(args))
-        with io.open(self.relative_path(self.cmd_file), 'at') as commands:
-            commands.write("%s\n" % (pretty_print_cmdline(args)))
-        return self.translate_box_exitcode(subprocess.call(args))
-
     def _popen(self, command,
                stdin=None, stdout=None, stderr=None,
                close_fds=True):
@@ -1220,14 +1208,44 @@ class IsolateSandbox(SandboxBase):
         return (Popen): popen object.
 
         """
-        self.exec_num += 1
         self.log = None
+        self.exec_num += 1
+
+        # We run a selection of commands without isolate, as they need
+        # to create new files. This is safe because these commands do
+        # not depend on the user input.
+        if command[0] in IsolateSandbox.SECURE_COMMANDS:
+            logger.debug("Executing non-securely: %s at %s",
+                         pretty_print_cmdline(command), self.path)
+            try:
+                prev_permissions = stat.S_IMODE(os.stat(self.path).st_mode)
+                os.chmod(self.path, 0700)
+                with io.open(self.relative_path(self.cmd_file), 'at') as cmds:
+                    cmds.write("%s\n" % (pretty_print_cmdline(command)))
+                p = subprocess.Popen(command, cwd=self.path,
+                                     stdin=stdin, stdout=stdout, stderr=stderr,
+                                     close_fds=close_fds)
+                os.chmod(self.path, prev_permissions)
+                # For secure commands, we clear the output so that it
+                # is not forwarded to the contestants. Secure commands
+                # are "setup" commands, which should not fail or
+                # provide information for the contestants.
+                open(os.path.join(self.path, self.stdout_file), "w").close()
+                open(os.path.join(self.path, self.stderr_file), "w").close()
+                self._write_empty_run_log(self.exec_num)
+            except OSError:
+                logger.critical(
+                    "Failed to execute program in sandbox with command: %s",
+                    pretty_print_cmdline(command), exc_info=True)
+                raise
+            return p
+
         args = [self.box_exec] + self.build_box_options() + ["--"] + command
         logger.debug("Executing program in sandbox with command: `%s'.",
                      pretty_print_cmdline(args))
         # Temporarily allow writing new files.
         prev_permissions = stat.S_IMODE(os.stat(self.path).st_mode)
-        os.chmod(self.path, 0777)
+        os.chmod(self.path, 0770)
         with io.open(self.relative_path(self.cmd_file), 'at') as commands:
             commands.write("%s\n" % (pretty_print_cmdline(args)))
         os.chmod(self.path, prev_permissions)
@@ -1242,6 +1260,14 @@ class IsolateSandbox(SandboxBase):
             raise
 
         return p
+
+    def _write_empty_run_log(self, index):
+        """Write a fake run.log file with no information."""
+        with open(os.path.join(self.path, "run.log.%s" % index), "w") as f:
+            f.write("time:0.000\n")
+            f.write("time-wall:0.000\n")
+            f.write("max-rss:0\n")
+            f.write("cg-mem:0\n")
 
     def execute_without_std(self, command, wait=False):
         """Execute the given command in the sandbox using

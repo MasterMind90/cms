@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2012 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2014 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2012-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
 # Copyright © 2016 Masaki Hara <ackie.h.gmai@gmail.com>
@@ -33,7 +33,7 @@ from cms import config
 from cms.grading.Sandbox import wait_without_std, Sandbox
 from cms.grading import compilation_step, \
     human_evaluation_message, is_evaluation_passed, extract_outcome_and_text, \
-    evaluation_step_before_run, evaluation_step_after_run, \
+    evaluation_step, evaluation_step_before_run, evaluation_step_after_run, \
     merge_evaluation_results
 from cms.grading.languagemanager import \
     LANGUAGES, HEADER_EXTS, SOURCE_EXTS, OBJECT_EXTS, get_language
@@ -112,7 +112,7 @@ class Communication(TaskType):
         source_ext = language.source_extension
 
         # Create the sandbox
-        sandbox = create_sandbox(file_cacher)
+        sandbox = create_sandbox(file_cacher, job.multithreaded_sandbox)
         job.sandboxes.append(sandbox.path)
 
         # Prepare the source files in the sandbox
@@ -168,7 +168,7 @@ class Communication(TaskType):
                 Executable(executable_filename, digest)
 
         # Cleanup
-        delete_sandbox(sandbox)
+        delete_sandbox(sandbox, job.success)
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
@@ -178,8 +178,9 @@ class Communication(TaskType):
             num_processes = self.parameters[0]
         indices = range(num_processes)
         # Create sandboxes and FIFOs
-        sandbox_mgr = create_sandbox(file_cacher)
-        sandbox_user = [create_sandbox(file_cacher) for i in indices]
+        sandbox_mgr = create_sandbox(file_cacher, job.multithreaded_sandbox)
+        sandbox_user = [create_sandbox(file_cacher, job.multithreaded_sandbox)
+                        for i in indices]
         fifo_dir = [tempfile.mkdtemp(dir=config.temp_dir) for i in indices]
         fifo_in = [os.path.join(fifo_dir[i], "in%d" % i) for i in indices]
         fifo_out = [os.path.join(fifo_dir[i], "out%d" % i) for i in indices]
@@ -220,6 +221,7 @@ class Communication(TaskType):
 
         # Second step: we start the user submission compiled with the
         # stub.
+        language = get_language(job.language)
         executable_filename = job.executables.keys()[0]
         executables_to_get = {
             executable_filename:
@@ -227,16 +229,25 @@ class Communication(TaskType):
             }
         processes = [None for i in indices]
         for i in indices:
-            command = ["./%s" % executable_filename, fifo_out[i], fifo_in[i]]
+            args = [fifo_out[i], fifo_in[i]]
             if num_processes != 1:
-                command.append(str(i))
+                args.append(str(i))
+            commands = language.get_evaluation_commands(
+                executable_filename,
+                main="stub",
+                args=args)
             user_allow_dirs = [fifo_dir[i]]
             for filename, digest in executables_to_get.iteritems():
                 sandbox_user[i].create_file_from_storage(
                     filename, digest, executable=True)
+            # Assumes that the actual execution of the user solution
+            # is the last command in commands, and that the previous
+            # are "setup" that doesn't need tight control.
+            if len(commands) > 1:
+                evaluation_step(sandbox_user[i], commands[:-1], 10, 256)
             processes[i] = evaluation_step_before_run(
                 sandbox_user[i],
-                command,
+                commands[-1],
                 job.time_limit,
                 job.memory_limit,
                 allow_dirs=user_allow_dirs)
@@ -288,9 +299,9 @@ class Communication(TaskType):
         job.outcome = "%s" % outcome if outcome is not None else None
         job.text = text
 
-        delete_sandbox(sandbox_mgr)
+        delete_sandbox(sandbox_mgr, job.success)
         for s in sandbox_user:
-            delete_sandbox(s)
+            delete_sandbox(s, job.success)
         if not config.keep_sandbox:
             for d in fifo_dir:
                 rmtree(d)
