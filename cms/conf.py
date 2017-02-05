@@ -74,8 +74,6 @@ class Config(object):
         self.use_cgroups = True
         self.use_cg_memory_limit = False
         self.sandbox_implementation = 'isolate'
-        self.use_jvm = False # Use normal JVM instead of gcj
-        self.jvm_flags = [] # For java execution
 
         self.plagiarism_ignore_whitespace = True
         self.plagiarism_ignore_preprocessor = True

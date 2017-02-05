@@ -457,8 +457,6 @@ def evaluation_step_before_run(sandbox, command,
         sandbox.timeout = 0
         sandbox.wallclock_timeout = 0
     sandbox.address_space = memory_limit * 1024
-    if config.use_jvm:
-        sandbox.max_processes = None # For some reason.. java need this
     sandbox.fsize = config.max_file_size
 
     if stdin_redirect is not None:
