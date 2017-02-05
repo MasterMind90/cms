@@ -38,13 +38,12 @@ Among the differences are:
   server.
 - Does not change the filename internally so that java compilation
   works as expected.
-- Added a config to use normal JVM instead of gcj for Java.
-  *Note: For the sandbox to work with JVM, the use_cg_memory_limit config
-  needs to be enabled, or you will need to set a very large memory_limit.*
 - Tags support in the ranking web server and the scoreboard can be filtered
   according to tag. For example 'guest' and 'local' flag.
 - It now record stderr and stdout of an evaluation. Available in
   AdminWebServer
+- Add an option to allow participants to submit solution outside
+  contest time.
 
 ACMICPCApproximate Score Type
 -----------------------------
