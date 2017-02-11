@@ -14,6 +14,7 @@ def calculate_plagiarism(submission, session, file_cacher):
 
     digest_a = session.query(File).filter(File.submission == submission).first().digest
     base_string = file_cacher.get_file_content(digest_a)
+    base_string.replace(" ", "")
 
     # Find submissions of the same task from other
     # participation
@@ -35,6 +36,7 @@ def calculate_plagiarism(submission, session, file_cacher):
     for sub in query:
         digest_b = session.query(File).filter(File.submission == sub).first().digest
         compare_string = file_cacher.get_file_content(digest_b)
+        compare_string = compare_string.replace(" ", "")
 
         matcher.set_seq1(compare_string)
         ratio = matcher.ratio()
