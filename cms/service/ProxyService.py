@@ -284,6 +284,8 @@ class ProxyService(TriggeredService):
             for submission in contest.get_submissions():
                 if submission.participation.hidden:
                     continue
+                if not submission.within_contest():
+                    continue
 
                 # The submission result can be None if the dataset has
                 # been just made live.
@@ -363,7 +365,7 @@ class ProxyService(TriggeredService):
                     "max_score": score_type.max_score,
                     "extra_headers": score_type.ranking_headers,
                     "score_precision": task.score_precision,
-		    "score_type": score_type.__class__.__name__,
+		            "score_type": score_type.__class__.__name__,
                     "score_mode": task.score_mode,
                 }
 
@@ -508,6 +510,12 @@ class ProxyService(TriggeredService):
                             submission_id)
                 return
 
+            if not submission.within_contest():
+                logger.info("[submission_scored] Score for submission %d "
+                            "not sent because the submission is outside contest.",
+                            submission_id)
+                return
+
             # Update RWS.
             for operation in self.operations_for_score(submission):
                 self.enqueue(operation)
@@ -537,6 +545,12 @@ class ProxyService(TriggeredService):
                             submission_id)
                 return
 
+            if not submission.within_contest():
+                logger.info("[submission_tokened] Token for submission %d "
+                            "not sent because submission is outside contest.",
+                            submission_id)
+                return
+
             # Update RWS.
             for operation in self.operations_for_token(submission):
                 self.enqueue(operation)
@@ -553,7 +567,8 @@ class ProxyService(TriggeredService):
                 # Update RWS.
                 if not submission.participation.hidden and \
                         submission.get_result() is not None and \
-                        submission.get_result().scored():
+                        submission.get_result().scored() and \
+                        submission.within_contest():
                     for operation in self.operations_for_score(submission):
                         self.enqueue(operation)
 
@@ -585,6 +600,7 @@ class ProxyService(TriggeredService):
                 # Update RWS.
                 if not submission.participation.hidden and \
                         submission.get_result() is not None and \
-                        submission.get_result().scored():
+                        submission.get_result().scored() and \
+                        submission.within_contest():
                     for operation in self.operations_for_score(submission):
                         self.enqueue(operation)

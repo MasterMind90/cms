@@ -3,7 +3,7 @@
 
 # Contest Management System - http://cms-dev.github.io/
 # Copyright © 2010-2015 Giovanni Mascellani <mascellani@poisson.phc.unipi.it>
-# Copyright © 2010-2016 Stefano Maggiolo <s.maggiolo@gmail.com>
+# Copyright © 2010-2017 Stefano Maggiolo <s.maggiolo@gmail.com>
 # Copyright © 2010-2012 Matteo Boscariol <boscarim@hotmail.com>
 # Copyright © 2013 Bernard Blackham <bernard@largestprime.net>
 # Copyright © 2013-2014 Luca Wehrstedt <luca.wehrstedt@gmail.com>
@@ -37,11 +37,27 @@ from collections import namedtuple
 
 from sqlalchemy.orm import joinedload
 
-from cms import config, \
-    LANG_C, LANG_CPP, LANG_PASCAL, LANG_PYTHON, LANG_PHP, LANG_JAVA, \
-    SCORE_MODE_MAX
+from cms import SCORE_MODE_MAX, config
 from cms.db import Submission
 from cms.grading.Sandbox import Sandbox
+
+from .language import Language, CompiledLanguage
+
+
+__all__ = [
+    # __init__.py
+    "JobException",
+    "COMPILATION_MESSAGES", "EVALUATION_MESSAGES",
+    "format_status_text",
+    "compilation_step", "evaluation_step",
+    "evaluation_step_before_run", "evaluation_step_after_run",
+    "human_evaluation_message", "is_evaluation_passed",
+    "filter_ansi_escape", "extract_outcome_and_text",
+    "white_diff_step",
+    "compute_changes_for_dataset", "task_score",
+    # language.py
+    "Language", "CompiledLanguage",
+]
 
 
 logger = logging.getLogger(__name__)
@@ -196,118 +212,6 @@ class JobException(Exception):
         return "JobException(\"%s\")" % (repr(self.msg))
 
 
-def get_compilation_commands(language, source_filenames, executable_filename,
-                             for_evaluation=True):
-    """Return the compilation commands.
-
-    The compilation commands are for the specified language, source
-    filenames and executable filename. Each command is a list of
-    strings, suitable to be passed to the methods in subprocess
-    package.
-
-    language (string): one of the recognized languages.
-    source_filenames ([string]): a list of the string that are the
-        filenames of the source files to compile; the order is
-        relevant: the first file must be the one that contains the
-        program entry point (with some langages, e.g. Pascal, only the
-        main file must be passed to the compiler).
-    executable_filename (string): the output file.
-    for_evaluation (bool): if True, define EVAL during the compilation;
-        defaults to True.
-
-    return ([[string]]): a list of commands, each a list of strings to
-        be passed to subprocess.
-
-    """
-    commands = []
-    if language == LANG_C:
-        command = ["/usr/bin/gcc"]
-        if for_evaluation:
-            command += ["-DEVAL"]
-        command += ["-static", "-O2", "-std=c11",
-                    "-o", executable_filename]
-        command += source_filenames
-        command += ["-lm"]
-        commands.append(command)
-    elif language == LANG_CPP:
-        command = ["/usr/bin/g++"]
-        if for_evaluation:
-            command += ["-DEVAL"]
-        command += ["-static", "-O2", "-std=c++11",
-                    "-o", executable_filename]
-        command += source_filenames
-        commands.append(command)
-    elif language == LANG_PASCAL:
-        command = ["/usr/bin/fpc"]
-        if for_evaluation:
-            command += ["-dEVAL"]
-        command += ["-XS", "-O2", "-o%s" % executable_filename]
-        command += [source_filenames[0]]
-        commands.append(command)
-    elif language == LANG_PYTHON:
-        # The executable name is fixed, and there is no way to specify
-        # the name of the pyc, so we need to bundle together two
-        # commands (compilation and rename).
-        # In order to use Python 3 change them to:
-        # /usr/bin/python3 -m py_compile %s
-        # mv __pycache__/%s.*.pyc %s
-        py_command = ["/usr/bin/python2", "-m", "py_compile",
-                      source_filenames[0]]
-        mv_command = ["/bin/mv", "%s.pyc" % os.path.splitext(os.path.basename(
-                      source_filenames[0]))[0], executable_filename]
-        commands.append(py_command)
-        commands.append(mv_command)
-    elif language == LANG_PHP:
-        command = ["/bin/cp", source_filenames[0], executable_filename]
-        commands.append(command)
-    elif language == LANG_JAVA:
-        class_name = os.path.splitext(source_filenames[0])[0]
-        if config.use_jvm:
-            commands.append(["/usr/bin/javac"] + source_filenames)
-            commands.append(["/usr/bin/jar", "cfe0", executable_filename, class_name, "." ])
-        else:
-            command = ["/usr/bin/gcj", "--main=%s" % class_name, "-O3", "-o", executable_filename] + source_filenames
-            commands.append(command)
-    else:
-        raise ValueError("Unknown language %s." % language)
-    return commands
-
-
-def get_evaluation_commands(language, executable_filename):
-    """Return the evaluation commands.
-
-    The evaluation commands are for the given language and executable
-    filename. Each command is a list of strings, suitable to be passed
-    to the methods in subprocess package.
-
-    language (string): one of the recognized languages.
-    executable_filename (string): the name of the executable.
-
-    return ([[string]]): a list of string to be passed to subprocess.
-
-    """
-    commands = []
-    if language in (LANG_C, LANG_CPP, LANG_PASCAL):
-        command = [os.path.join(".", executable_filename)]
-        commands.append(command)
-    elif language == LANG_JAVA:
-        if config.use_jvm:
-            commands.append([os.path.realpath("/usr/bin/java")]+config.jvm_flags+["-jar", executable_filename])
-        else:
-            commands.append([os.path.join(".", executable_filename)])
-    elif language == LANG_PYTHON:
-        # In order to use Python 3 change it to:
-        # /usr/bin/python3 %s
-        command = ["/usr/bin/python2", executable_filename]
-        commands.append(command)
-    elif language == LANG_PHP:
-        command = ["/usr/bin/php5", executable_filename]
-        commands.append(command)
-    else:
-        raise ValueError("Unknown language %s." % language)
-    return commands
-
-
 def format_status_text(status, translator=None):
     """Format the given status text in the given locale.
 
@@ -361,6 +265,13 @@ def compilation_step(sandbox, commands):
     """
     # Set sandbox parameters suitable for compilation.
     sandbox.dirs += [("/etc", None, None)]
+    # We need to add "/var/lib/ghc" to the unrestricted dirs so GHC can access
+    # haskell's package database.
+    # GHC looks for it in "/usr/lib/ghc/package.conf.d", which is only a
+    # symlink to "/var/lib/ghc/package.conf.d"
+    ghc_dir = "/var/lib/ghc"
+    if os.path.exists(ghc_dir):
+        sandbox.dirs += [("/var/lib/ghc", None, None)]
     sandbox.preserve_env = True
     sandbox.max_processes = None
     sandbox.timeout = 10
@@ -546,8 +457,6 @@ def evaluation_step_before_run(sandbox, command,
         sandbox.timeout = 0
         sandbox.wallclock_timeout = 0
     sandbox.address_space = memory_limit * 1024
-    if config.use_jvm:
-        sandbox.max_processes = None # For some reason.. java need this
     sandbox.fsize = config.max_file_size
 
     if stdin_redirect is not None:
@@ -968,7 +877,9 @@ def task_score(participation, task):
     # / evaluated / scored.
     partial = False
 
-    submissions = [s for s in participation.submissions if s.task is task]
+    contest = task.contest
+
+    submissions = [s for s in participation.submissions if s.task is task and s.within_contest()]
     submissions.sort(key=lambda s: s.timestamp)
 
     if submissions == []:

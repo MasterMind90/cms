@@ -193,7 +193,7 @@ def actual_phase_required(*actual_phases):
         def wrapped(self, *args, **kwargs):
             if self.r_params["actual_phase"] not in actual_phases and \
                     (self.current_user is None or
-                     not self.current_user.unrestricted):
+                    not (self.current_user.unrestricted or self.contest.allow_all_submissions)):
                 # TODO maybe return some error code?
                 self.redirect("/")
             else:
@@ -342,9 +342,9 @@ def get_score_class(score, max_score):
 def N_(*unused_args, **unused_kwargs):
     pass
 
-# This is a string in task_submissions.html and test_interface.html
-# that for some reason doesn't get included in cms.pot.
+# Some strings in templates that for some reason don't get included in cms.pot.
 N_("loading...")
+N_("unknown")
 
 N_("%d second", "%d seconds", 0)
 N_("%d minute", "%d minutes", 0)

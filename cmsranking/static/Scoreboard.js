@@ -51,6 +51,9 @@ var Scoreboard = new function () {
         DataStore.score_events.add(self.score_handler);
         DataStore.rank_events.add(self.rank_handler);
         DataStore.select_events.add(self.select_handler);
+
+        // Initial filter
+        self.filter_users();
     };
 
 
@@ -136,6 +139,18 @@ var Scoreboard = new function () {
           if(self.user_list[id].tags.indexOf(tag) == -1){
             can = false;
           }
+        }
+
+        if(Config.user_whitelist){
+            if(!checkFilter(self.user_list[id], Config.user_whitelist, { match: 'filter' } )){
+                can = false
+            }
+        }
+        
+        if(Config.user_blacklist){
+            if(checkFilter(self.user_list[id], Config.user_blacklist, { match: 'any' } )){
+                can = false
+            }
         }
 
         if(can){

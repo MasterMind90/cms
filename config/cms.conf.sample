@@ -42,7 +42,7 @@
     "_section": "Database",
 
     "_help": "Connection string for the database.",
-    "database": "postgresql+psycopg2://cmsuser:password@localhost/database",
+    "database": "postgresql+psycopg2://cmsuser:your_password_here@localhost/cmsdb",
 
     "_help": "Whether SQLAlchemy prints DB queries on stdout.",
     "database_debug": false,
@@ -172,9 +172,6 @@
     "max_jobs_per_user": 10,
     "pdf_printing_allowed": false,
     "log_debug": false,
-
-    "use_jvm": true,
-    "jvm_flags": ["-Xmx512M", "-Xss64M", "-XX:+UseSerialGC"],
 
     "_help": "Use CG memory limit instead of address space limit. More accurate and will solve",
     "_help": "issue with JVM memory limit, but require swapaccount=1 kernel config",
