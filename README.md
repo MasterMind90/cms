@@ -56,6 +56,19 @@ x `wrong attempt`) - (`time_decay` x `seconds from contest start`).
 A good approximation would be [1000,20,0.0166], but it is still possible
 for the ranking to behave differently from actual ACM-ICPC ranking system.
 
+DockerCompose
+-------------
+
+This branch also comes with some `docker-compose` setup. To use it, run:
+
+- `./dockerscripts/setup.sh`
+- `./dockerscripts/buildContest.sh contest/`
+- `./dockerscripts/updateContest.sh contest/`
+- `./dockerscripts/importUsers.sh users.json`
+- `./dockerscripts/run.sh`
+
+Where `contest/` is the extracted polygon package. And `users.json` is the file
+that is used by the `cmsJsonUserImporter`.
 
 Download
 --------

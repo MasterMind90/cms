@@ -8,7 +8,6 @@ services:
             - log:/var/local/log/cms/
             - lib:/var/local/lib/cms/
             - cache:/var/local/cache/cms/
-            - ../contest:/contest/
         links:
             - postgres
         environment:
