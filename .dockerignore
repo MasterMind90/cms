@@ -1,0 +1,8 @@
+cache/
+build/
+dist/
+lib/
+log/
+contest/
+config/cms.conf
+config/cms.ranking.conf

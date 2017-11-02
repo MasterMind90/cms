@@ -4,6 +4,7 @@
 *.pyc
 build
 dist
+contest
 cms.egg-info
 .testfailures
 .unittestfailures

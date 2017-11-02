@@ -1,0 +1,51 @@
+version: '3'
+services:
+    main:
+        build: ..
+        ports:
+            - "8888:8888"
+        volumes:
+            - log:/var/local/log/cms/
+            - lib:/var/local/lib/cms/
+            - cache:/var/local/cache/cms/
+            - ../contest:/contest/
+        links:
+            - postgres
+        environment:
+            - ADMIN_PASSWORD=admin123
+            - ADMIN_USERNAME=admin
+    admin:
+        build: ..
+        ports:
+            - "8889:8889"
+        volumes:
+            - log:/var/local/log/cms/
+            - lib:/var/local/lib/cms/
+            - cache:/var/local/cache/cms/
+        links:
+            - postgres
+        command: dockerize -wait tcp://postgres:5432 cmsAdminWebServer
+    rankingserver:
+        build: ..
+        ports:
+            - "8890:8890"
+        volumes:
+            - log:/var/local/log/cms/
+            - lib:/var/local/lib/cms/
+            - cache:/var/local/cache/cms/
+        links:
+            - postgres
+        command: cmsRankingWebServer
+    postgres:
+        image: postgres:9.6
+        volumes:
+            - dbdata:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_USER=cmsuser
+            - POSTGRES_PASSWORD=password
+            - POSTGRES_DB=cmsdb
+volumes:
+    log: {}
+    lib: {}
+    cache: {}
+    dbdata: {}
