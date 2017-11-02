@@ -70,6 +70,9 @@ This branch also comes with some `docker-compose` setup. To use it, run:
 Where `contest/` is the extracted polygon package. And `users.json` is the file
 that is used by the `cmsJsonUserImporter`.
 
+**WARNING** Due to some cgroup things that I couldn't figureout, the 
+container is running under privileged mode.
+
 Download
 --------
 

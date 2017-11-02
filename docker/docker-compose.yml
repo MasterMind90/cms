@@ -13,6 +13,7 @@ services:
         environment:
             - ADMIN_PASSWORD=admin123
             - ADMIN_USERNAME=admin
+        privileged: true
     admin:
         build: ..
         ports:
@@ -24,6 +25,15 @@ services:
         links:
             - postgres
         command: dockerize -wait tcp://postgres:5432 cmsAdminWebServer
+    logserver:
+        build: ..
+        volumes:
+            - log:/var/local/log/cms/
+            - lib:/var/local/lib/cms/
+            - cache:/var/local/cache/cms/
+        links:
+            - postgres
+        command: dockerize -wait tcp://postgres:5432 cmsLogService
     rankingserver:
         build: ..
         ports:
