@@ -180,5 +180,9 @@
     "_help": "Use cg-timing to measure time",
     "use_cg_timing": true,
 
+    "_help": "Multiplier and offset for wallclock timeout over offset.",
+    "wallclock_timeout_multiplier": 2,
+    "wallclock_timeout_offset": 1,
+
     "_help": "This is the end of this file."
 }

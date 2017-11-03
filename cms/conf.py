@@ -82,6 +82,8 @@ class Config(object):
         # Sandbox.
         self.max_file_size = 1048576
         self.use_cg_timing = True
+        self.wallclock_timeout_multiplier = 2
+        self.wallclock_timeout_offset = 1
 
         # WebServers.
         self.secret_key_default = "8e045a51e4b102ea803c06f92841a1fb"
