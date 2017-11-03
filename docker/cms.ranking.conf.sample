@@ -17,10 +17,5 @@
     "first_name_is_name": true,
     "show_full_task_name": true,
 
-    "user_blacklist": {
-        "tags": { "$contains" : ["iium"] }
-    },
-
-
     "_help": "This is the end of this file."
 }

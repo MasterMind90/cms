@@ -32,8 +32,8 @@ ADD requirements.txt /app/
 RUN pip install -r /app/requirements.txt
 
 ADD . /app/
-ADD docker/cms.conf /etc/
-ADD docker/cms.ranking.conf /etc/
+ADD docker/cms.conf.sample /app/config/cms.conf.sample
+ADD docker/cms.ranking.conf.sample /app/config/cms.ranking.conf.sample
 
 WORKDIR /app/
 
@@ -41,7 +41,7 @@ RUN useradd -ms /bin/bash cmsuser
 ENV SUDO_USER=cmsuser
 
 RUN ./prerequisites.py build --as-root
-RUN ./prerequisites.py install -y --no-conf
+RUN ./prerequisites.py install -y
 
 RUN python setup.py install
 
