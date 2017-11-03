@@ -2,11 +2,24 @@ FROM ubuntu:16.04
 
 # Deps
 RUN apt-get update
-RUN apt-get install -y build-essential openjdk-8-jre openjdk-8-jdk fpc \
+RUN apt-get install -y build-essential fpc \
     postgresql postgresql-client gettext python2.7 \
     iso-codes shared-mime-info stl-manual cgroup-lite \
     python-pip libpq-dev libcups2-dev libffi-dev \
     sudo dos2unix wget
+
+# Install other compilers here
+RUN apt-get install -y fpc php7.0-cli haskell-platform
+
+# Install Java.
+RUN \
+  echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+  apt-get install -y software-properties-common && \
+  add-apt-repository -y ppa:webupd8team/java && \
+  apt-get update && \
+  apt-get install -y oracle-java8-installer && \
+  rm -rf /var/lib/apt/lists/* && \
+  rm -rf /var/cache/oracle-jdk8-installer
 
 # Dockerize
 ENV DOCKERIZE_VERSION=v0.5.0
