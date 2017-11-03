@@ -419,6 +419,7 @@ class RoutingHandler(object):
     def __init__(self, event_handler, logo_handler):
         self.router = Map([
             Rule("/", methods=["GET"], endpoint="root"),
+            Rule("/config", methods=["GET"], endpoint="config"),
             Rule("/sublist/<user_id>", methods=["GET"], endpoint="sublist"),
             Rule("/history", methods=["GET"], endpoint="history"),
             Rule("/scores", methods=["GET"], endpoint="scores"),

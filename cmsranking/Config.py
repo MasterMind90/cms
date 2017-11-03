@@ -66,6 +66,7 @@ class Config(object):
         # UI stuff
         self.show_team = True
         self.first_name_is_name = False
+        self.show_full_task_name = False
 
         # Buffers
         self.buffer_size = 100  # Needs to be strictly positive.
@@ -141,7 +142,8 @@ class Config(object):
             "show_team": self.show_team,
             "user_blacklist": self.user_blacklist,
             "user_whitelist": self.user_whitelist,
-            "first_name_is_name": self.first_name_is_name
+            "first_name_is_name": self.first_name_is_name,
+            "show_full_task_name": self.show_full_task_name
         }
 
     def _load_many(self, conf_paths):
