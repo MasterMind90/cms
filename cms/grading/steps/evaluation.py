@@ -210,13 +210,16 @@ def evaluation_step_before_run(sandbox, command,
     return sandbox.execute_without_std(command, wait=wait)
 
 
-def evaluation_step_after_run(sandbox):
+def evaluation_step_after_run(sandbox, collect_output=True):
     """Final part of an evaluation step, collecting the results after the run.
 
     See evaluation_step for the meaning of the argument and the return value.
 
+    collect_output (bool): if True, stdout and stderr will be captured and
+        included in the stats for admin debugging purposes.
+
     """
-    stats = execution_stats(sandbox)
+    stats = execution_stats(sandbox, collect_output=collect_output)
     exit_status = stats["exit_status"]
 
     if exit_status == Sandbox.EXIT_OK:

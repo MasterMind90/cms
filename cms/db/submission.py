@@ -746,6 +746,15 @@ class Evaluation(Base):
         Unicode,
         nullable=True)
 
+    # Program output captured during evaluation.
+    # Stored for admin debugging purposes.
+    user_output = Column(
+        Unicode,
+        nullable=True)
+    user_error = Column(
+        Unicode,
+        nullable=True)
+
     @property
     def codename(self):
         """Return the codename of the testcase."""

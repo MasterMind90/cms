@@ -566,6 +566,8 @@ class EvaluationJob(Job):
             execution_memory=self.plus.get('execution_memory'),
             evaluation_shard=self.shard,
             evaluation_sandbox=":".join(self.sandboxes),
+            user_output=self.plus.get('stdout'),
+            user_error=self.plus.get('stderr'),
             testcase=sr.dataset.testcases[self.operation.testcase_codename])]
 
     @staticmethod

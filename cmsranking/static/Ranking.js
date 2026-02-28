@@ -36,12 +36,15 @@ if (!window.console.error) {
 }
 
 $(document).ready(function() {
-    DataStore.init(function(){
-        HistoryStore.init();
-        UserDetail.init();
-        TimeView.init();
-        TeamSearch.init();
-        Overview.init();
-        Scoreboard.init();
+    // Fetch configuration (whitelist/blacklist) before initializing
+    Config.fetch_config(function() {
+        DataStore.init(function(){
+            HistoryStore.init();
+            UserDetail.init();
+            TimeView.init();
+            TeamSearch.init();
+            Overview.init();
+            Scoreboard.init();
+        });
     });
 });

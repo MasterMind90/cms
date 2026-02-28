@@ -257,6 +257,31 @@
     </tbody>
   </table>
 
+  {% set has_output = [] %}
+  {% for ev in sr.evaluations|sort(attribute="codename") %}
+    {% if ev.user_output is not none or ev.user_error is not none %}
+      {% if has_output.append(ev) %}{% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {% if has_output %}
+  <h3>Execution Output</h3>
+  <p class="help">Program stdout/stderr captured during evaluation (for debugging).</p>
+  {% for ev in has_output %}
+  <details>
+    <summary>{{ ev.codename }}</summary>
+    {% if ev.user_output %}
+    <h4>Standard Output</h4>
+    <pre style="max-height: 200px; overflow: auto; background: #f5f5f5; padding: 8px; border: 1px solid #ddd;">{{ ev.user_output }}</pre>
+    {% endif %}
+    {% if ev.user_error %}
+    <h4>Standard Error</h4>
+    <pre style="max-height: 200px; overflow: auto; background: #fff5f5; padding: 8px; border: 1px solid #fdd;">{{ ev.user_error }}</pre>
+    {% endif %}
+  </details>
+  {% endfor %}
+  {% endif %}
+
 </div>
 
 

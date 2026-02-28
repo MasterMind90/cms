@@ -54,6 +54,12 @@ class Config:
         self.username = 'usern4me'
         self.password = 'passw0rd'
 
+        # User filtering (client-side)
+        # Set to a filter object to whitelist/blacklist users in the ranking
+        # Example: {"team": "teamA"} to only show users from teamA
+        self.user_whitelist = None
+        self.user_blacklist = None
+
         # Buffers
         self.buffer_size = 100  # Needs to be strictly positive.
 
@@ -162,3 +168,15 @@ class Config:
                 return False
             setattr(self, key, value)
         return True
+
+    def to_clientside(self):
+        """Return a dictionary of config values to expose to the client.
+
+        These values will be available via the /config endpoint and can
+        be used by client-side JavaScript for filtering and display.
+
+        """
+        return {
+            "user_whitelist": self.user_whitelist,
+            "user_blacklist": self.user_blacklist,
+        }

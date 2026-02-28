@@ -72,5 +72,34 @@ var Config = new function () {
 
     self.get_history_url = function () {
         return "history";
-    }
+    };
+
+    self.get_config_url = function () {
+        return "config";
+    };
+
+    // User filtering configuration (loaded from server)
+    self.user_whitelist = null;
+    self.user_blacklist = null;
+
+    /**
+     * Fetch configuration from the server.
+     * @param {Function} callback - Called when config is loaded
+     */
+    self.fetch_config = function(callback) {
+        $.ajax({
+            url: self.get_config_url(),
+            dataType: "json",
+            success: function (data, status, xhr) {
+                $.each(data, function(key, value) {
+                    self[key] = value;
+                });
+                callback();
+            },
+            error: function () {
+                console.warn("Failed to fetch config from server");
+                callback();
+            }
+        });
+    };
 };

@@ -50,6 +50,51 @@ var Scoreboard = new function () {
         DataStore.score_events.add(self.score_handler);
         DataStore.rank_events.add(self.rank_handler);
         DataStore.select_events.add(self.select_handler);
+
+        // Apply initial user filtering
+        self.filter_users();
+    };
+
+
+    /**
+     * Filter users based on whitelist/blacklist configuration.
+     * Uses the checkFilter function from JsonFilter.js.
+     */
+    self.filter_users = function () {
+        for (var i = 0; i < self.user_list.length; i++) {
+            var user = self.user_list[i];
+            self.apply_user_filter(user);
+        }
+    };
+
+
+    /**
+     * Check if a user should be visible based on whitelist/blacklist.
+     * @param {Object} user - The user object to check
+     */
+    self.apply_user_filter = function (user) {
+        var visible = true;
+
+        // Check whitelist (if set, user must match)
+        if (Config.user_whitelist) {
+            if (!checkFilter(user, Config.user_whitelist, { match: 'filter' })) {
+                visible = false;
+            }
+        }
+
+        // Check blacklist (if matches, user is hidden)
+        if (Config.user_blacklist) {
+            if (checkFilter(user, Config.user_blacklist, { match: 'any' })) {
+                visible = false;
+            }
+        }
+
+        // Show or hide the user row
+        if (visible) {
+            $(user["row"]).css("display", "table-row");
+        } else {
+            $(user["row"]).css("display", "none");
+        }
     };
 
 
@@ -389,6 +434,9 @@ var Scoreboard = new function () {
         // the maximum rank), but we may still need to sort it due to other
         // users having that score and the sort-by-name clause.
         self.move_user(user);
+
+        // Apply whitelist/blacklist filtering to new user
+        self.apply_user_filter(user);
     };
 
 

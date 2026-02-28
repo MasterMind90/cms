@@ -385,6 +385,30 @@ class ScoreHandler:
         return response(environ, start_response)
 
 
+class ConfigHandler:
+    """Handler for exposing client-side configuration."""
+
+    def __init__(self, config):
+        self.config = config
+
+    def __call__(self, environ, start_response):
+        return self.wsgi_app(environ, start_response)
+
+    def wsgi_app(self, environ, start_response):
+        request = Request(environ)
+        request.encoding_errors = "strict"
+
+        if request.accept_mimetypes.quality("application/json") <= 0:
+            raise NotAcceptable()
+
+        response = Response()
+        response.status_code = 200
+        response.mimetype = "application/json"
+        response.data = json.dumps(self.config.to_clientside())
+
+        return response(environ, start_response)
+
+
 class ImageHandler:
     EXT_TO_MIME = {
         'png': 'image/png',
@@ -475,13 +499,14 @@ class RootHandler:
 class RoutingHandler:
 
     def __init__(self, root_handler, event_handler, logo_handler,
-                 score_handler, history_handler):
+                 score_handler, history_handler, config_handler):
         self.router = Map([
             Rule("/", methods=["GET"], endpoint="root"),
             Rule("/history", methods=["GET"], endpoint="history"),
             Rule("/scores", methods=["GET"], endpoint="scores"),
             Rule("/events", methods=["GET"], endpoint="events"),
             Rule("/logo", methods=["GET"], endpoint="logo"),
+            Rule("/config", methods=["GET"], endpoint="config"),
         ], encoding_errors="strict")
 
         self.event_handler = event_handler
@@ -489,6 +514,7 @@ class RoutingHandler:
         self.score_handler = score_handler
         self.history_handler = history_handler
         self.root_handler = root_handler
+        self.config_handler = config_handler
 
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
@@ -510,6 +536,8 @@ class RoutingHandler:
             return self.score_handler(environ, start_response)
         elif endpoint == "history":
             return self.history_handler(environ, start_response)
+        elif endpoint == "config":
+            return self.config_handler(environ, start_response)
 
 
 def main():
@@ -581,7 +609,8 @@ def main():
             os.path.join(config.lib_dir, '%(name)s'),
             os.path.join(config.web_dir, 'img', 'logo.png')),
         ScoreHandler(stores),
-        HistoryHandler(stores))
+        HistoryHandler(stores),
+        ConfigHandler(config))
 
     wsgi_app = SharedDataMiddleware(DispatcherMiddleware(
         toplevel_handler, {
