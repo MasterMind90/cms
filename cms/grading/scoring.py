@@ -135,7 +135,7 @@ def task_score(participation, task,
             "scores regardless of token status.")
 
     submissions = [s for s in participation.submissions
-                   if s.task is task and s.official]
+                   if s.task is task and s.official and s.within_contest()]
     if len(submissions) == 0:
         return 0.0, False
 

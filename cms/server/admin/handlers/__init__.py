@@ -78,6 +78,7 @@ from .submission import \
     SubmissionHandler, \
     SubmissionCommentHandler, \
     SubmissionOfficialStatusHandler, \
+    SubmissionPlagiarismHandler, \
     SubmissionFileHandler
 from .task import \
     AddTaskHandler, \
@@ -211,6 +212,8 @@ HANDLERS = [
     (r"/submission/([0-9]+)(?:/([0-9]+))?/comment", SubmissionCommentHandler),
     (r"/submission/([0-9]+)(?:/([0-9]+))?/official",
      SubmissionOfficialStatusHandler),
+    (r"/submission/([0-9]+)(?:/([0-9]+))?/plagiarism",
+     SubmissionPlagiarismHandler),
     (r"/submission_file/([0-9]+)", SubmissionFileHandler),
 
     # User tests

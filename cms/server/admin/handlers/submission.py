@@ -135,3 +135,32 @@ class SubmissionOfficialStatusHandler(BaseHandler):
             self.redirect(self.url("submission", submission_id))
         else:
             self.redirect(self.url("submission", submission_id, dataset_id))
+
+
+class SubmissionPlagiarismHandler(BaseHandler):
+    """Called when the admin requests a plagiarism check on a submission."""
+    @require_permission(BaseHandler.PERMISSION_ALL)
+    def post(self, submission_id, dataset_id=None):
+        from cms.plagiarismchecker import calculate_plagiarism
+
+        submission = self.safe_get_item(Submission, submission_id)
+
+        try:
+            calculate_plagiarism(
+                submission, self.sql_session, self.service.file_cacher)
+
+        except Exception as error:
+            logger.error("Plagiarism check failed: %s", error)
+            self.service.add_notification(
+                make_datetime(), "Plagiarism check failed", repr(error))
+
+        else:
+            self.try_commit()
+            self.service.add_notification(
+                make_datetime(), "Plagiarism check complete",
+                submission.plagiarism_check_result or "No result")
+
+        if dataset_id is None:
+            self.redirect(self.url("submission", submission_id))
+        else:
+            self.redirect(self.url("submission", submission_id, dataset_id))

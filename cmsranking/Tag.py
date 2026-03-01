@@ -17,15 +17,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from cmsranking.Entity import Entity, InvalidData
+from cmsranking.Store import Store
 
 
-class User(Entity):
-    """The entity representing a user.
+class Tag(Entity):
+    """The entity representing a tag.
+    The structure is basically cloned from team.
+    The tag is used to tag user with various tags such as "guest" or "newbie".
 
     It consists of the following properties:
-    - f_name (unicode): the first name of the user
-    - l_name (unicode): the last name of the user
-    - team (unicode): the id of the team the user belongs to
+    - name (unicode): the human-readable name of the tag
 
     """
     def __init__(self):
@@ -33,10 +34,7 @@ class User(Entity):
 
         """
         Entity.__init__(self)
-        self.f_name = None
-        self.l_name = None
-        self.team = None
-        self.tags = []
+        self.name = None
 
     @staticmethod
     def validate(data):
@@ -48,13 +46,8 @@ class User(Entity):
         try:
             assert isinstance(data, dict), \
                 "Not a dictionary"
-            assert isinstance(data['f_name'], str), \
-                "Field 'f_name' isn't a string"
-            assert isinstance(data['l_name'], str), \
-                "Field 'l_name' isn't a string"
-            assert data['team'] is None or \
-                isinstance(data['team'], str), \
-                "Field 'team' isn't a string (or null)"
+            assert isinstance(data['name'], str), \
+                "Field 'name' isn't a string"
         except KeyError as exc:
             raise InvalidData("Field %s is missing" % exc)
         except AssertionError as exc:
@@ -62,16 +55,20 @@ class User(Entity):
 
     def set(self, data):
         self.validate(data)
-        self.f_name = data['f_name']
-        self.l_name = data['l_name']
-        self.team = data['team']
-        self.tags = data.get('tags', [])
+        self.name = data['name']
 
     def get(self):
         result = self.__dict__.copy()
         del result['key']
         return result
 
-    def consistent(self, stores):
-        return self.team is None or "team" not in stores \
-               or self.team in stores["team"]
+
+# Avoid circular import - store is created after User module is imported
+store = None
+
+
+def create_store():
+    global store
+    from cmsranking.User import store as user_store
+    store = Store(Tag, 'tags', [user_store])
+    return store

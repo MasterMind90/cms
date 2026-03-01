@@ -47,6 +47,7 @@ from cmsranking.Scoring import ScoringStore
 from cmsranking.Store import Store
 from cmsranking.Subchange import Subchange
 from cmsranking.Submission import Submission
+from cmsranking.Tag import Tag
 from cmsranking.Task import Task
 from cmsranking.Team import Team
 from cmsranking.User import User
@@ -585,6 +586,9 @@ def main():
     stores["team"] = Store(
         Team, os.path.join(config.lib_dir, 'teams'), stores,
         [stores["user"]])
+    stores["tag"] = Store(
+        Tag, os.path.join(config.lib_dir, 'tags'), stores,
+        [stores["user"]])
     stores["task"] = Store(
         Task, os.path.join(config.lib_dir, 'tasks'), stores,
         [stores["submission"]])
@@ -595,6 +599,7 @@ def main():
     stores["contest"].load_from_disk()
     stores["task"].load_from_disk()
     stores["team"].load_from_disk()
+    stores["tag"].load_from_disk()
     stores["user"].load_from_disk()
     stores["submission"].load_from_disk()
     stores["subchange"].load_from_disk()
@@ -622,6 +627,9 @@ def main():
                 config.username, config.password, config.realm_name),
             '/teams': StoreHandler(
                 stores["team"],
+                config.username, config.password, config.realm_name),
+            '/tags': StoreHandler(
+                stores["tag"],
                 config.username, config.password, config.realm_name),
             '/users': StoreHandler(
                 stores["user"],

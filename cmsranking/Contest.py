@@ -38,6 +38,7 @@ class Contest(Entity):
         self.begin = None
         self.end = None
         self.score_precision = None
+        self.freeze_time = None
 
     @staticmethod
     def validate(data):
@@ -61,6 +62,10 @@ class Contest(Entity):
                 "Field 'score_precision' isn't an integer"
             assert data['score_precision'] >= 0, \
                 "Field 'score_precision' is negative"
+            # freeze_time is optional
+            if 'freeze_time' in data and data['freeze_time'] is not None:
+                assert isinstance(data['freeze_time'], int), \
+                    "Field 'freeze_time' isn't an integer"
         except KeyError as exc:
             raise InvalidData("Field %s is missing" % exc)
         except AssertionError as exc:
@@ -72,6 +77,7 @@ class Contest(Entity):
         self.begin = data['begin']
         self.end = data['end']
         self.score_precision = data['score_precision']
+        self.freeze_time = data.get('freeze_time')
 
     def get(self):
         result = self.__dict__.copy()

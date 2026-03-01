@@ -220,6 +220,22 @@ abbr {
     top: 280px;
 }
 
+#TimeView.frozen + #SidePanel {
+    top: 304px;
+}
+
+#TimeView_frozen {
+    font-size: 14px;
+    font-weight: bold;
+    color: #CC0000;
+    background-color: #FFEEEE;
+    border: 1px solid #CC0000;
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin: 4px auto;
+    display: inline-block;
+}
+
 
 /******************************************************************************\
 |                                                                              |
@@ -424,6 +440,21 @@ abbr {
     max-height: 20px;
     margin: 0 auto;
     box-shadow: 0 0 2px 0 gray;
+}
+
+#Scoreboard_body tr td.tags {
+    text-align: left;
+    padding: 0 0.5em;
+}
+
+.tag-item {
+    display: inline-block;
+    background-color: #3498db;
+    color: white;
+    padding: 1px 6px;
+    margin: 1px;
+    border-radius: 3px;
+    font-size: 0.85em;
 }
 
 #Scoreboard_head tr th,

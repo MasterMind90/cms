@@ -75,6 +75,15 @@
     </tr>
     <tr>
       <td>
+        <span class="info" title="Whether contestants can submit outside contest time. Submissions made outside contest time will be evaluated but not counted in the ranking."></span>
+        <label for="allow_submissions_outside_contest_time">Allow submissions outside contest time</label>
+      </td>
+      <td>
+        <input type="checkbox" id="allow_submissions_outside_contest_time" name="allow_submissions_outside_contest_time" {{ "checked" if contest.allow_submissions_outside_contest_time else "" }}/>
+      </td>
+    </tr>
+    <tr>
+      <td>
         <span class="info" title="The number of decimal places the scores will be rounded to.
                                   Example: '2' to allow 98.76."></span>
         Score decimal places
@@ -209,6 +218,24 @@
         End time (in UTC)
       </td>
       <td><input type="text" name="stop" value="{{ contest.stop }}"></td>
+    </tr>
+    <tr>
+      <td>
+        <span class="info" title="Time when the ranking scoreboard is frozen (scores stop being sent to ranking server).
+                                  Leave empty to disable freezing.
+                                  Example: '2015-12-31 17:00:00'."></span>
+        Freeze time (in UTC)
+      </td>
+      <td><input type="text" name="freeze_time" value="{{ contest.freeze_time if contest.freeze_time is not none else "" }}"></td>
+    </tr>
+    <tr>
+      <td>
+        <span class="info" title="If checked, scores will be sent to ranking even after freeze time (unfreeze the rankings)."></span>
+        <label for="unfreeze">Unfreeze rankings</label>
+      </td>
+      <td>
+        <input type="checkbox" id="unfreeze" name="unfreeze" {{ "checked" if contest.unfreeze else "" }}/>
+      </td>
     </tr>
     <tr>
       <td>

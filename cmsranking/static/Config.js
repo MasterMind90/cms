@@ -42,6 +42,14 @@ var Config = new function () {
         return "teams/" + t_key;
     };
 
+    self.get_tag_list_url = function () {
+        return "tags/";
+    };
+
+    self.get_tag_read_url = function (t_key) {
+        return "tags/" + t_key;
+    };
+
     self.get_user_list_url = function () {
         return "users/";
     };

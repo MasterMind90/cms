@@ -179,7 +179,7 @@
 
 
 
-{% if actual_phase == 0 or actual_phase == 3%}
+{% if actual_phase == 0 or actual_phase == 3 or contest.allow_submissions_outside_contest_time %}
 <h2>{% trans %}Task overview{% endtrans %}</h2>
 
 <table class="table table-bordered table-striped">

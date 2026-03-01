@@ -97,6 +97,7 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             self.get_bool(attrs, "submissions_download_allowed")
             self.get_bool(attrs, "allow_questions")
             self.get_bool(attrs, "allow_user_tests")
+            self.get_bool(attrs, "allow_submissions_outside_contest_time")
             self.get_bool(attrs, "block_hidden_participations")
             self.get_bool(attrs, "allow_password_authentication")
             self.get_bool(attrs, "allow_registration")
@@ -126,6 +127,9 @@ class ContestHandler(SimpleContestHandler("contest.html")):
             self.get_bool(attrs, "analysis_enabled")
             self.get_datetime(attrs, "analysis_start")
             self.get_datetime(attrs, "analysis_stop")
+
+            self.get_datetime(attrs, "freeze_time")
+            self.get_bool(attrs, "unfreeze")
 
             # Update the contest.
             contest.set_attrs(attrs)

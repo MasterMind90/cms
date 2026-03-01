@@ -339,7 +339,9 @@ class ProxyService(TriggeredService):
                 "name": contest.description,
                 "begin": int(make_timestamp(contest.start)),
                 "end": int(make_timestamp(contest.stop)),
-                "score_precision": contest.score_precision}
+                "score_precision": contest.score_precision,
+                "freeze_time": int(make_timestamp(contest.freeze_time))
+                               if contest.freeze_time is not None else None}
 
             users = dict()
             teams = dict()
@@ -497,6 +499,23 @@ class ProxyService(TriggeredService):
                             "not sent because the submission is not official.",
                             submission_id)
                 return
+
+            # Check if submission was made outside contest time.
+            if not submission.within_contest():
+                logger.info("[submission_scored] Score for submission %d "
+                            "not sent because it was made outside contest time.",
+                            submission_id)
+                return
+
+            # Check if rankings are frozen.
+            contest = submission.task.contest
+            if contest.freeze_time is not None and not contest.unfreeze:
+                from datetime import datetime
+                if datetime.utcnow() >= contest.freeze_time:
+                    logger.info("[submission_scored] Score for submission %d "
+                                "not sent because rankings are frozen.",
+                                submission_id)
+                    return
 
             # Update RWS.
             for operation in self.operations_for_score(submission):

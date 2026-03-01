@@ -97,6 +97,16 @@ class Submission(Base):
         default=True,
     )
 
+    # Plagiarism check result (human-readable summary)
+    plagiarism_check_result = Column(
+        Unicode,
+        nullable=True)
+
+    # Plagiarism check details (JSON with detailed comparison data)
+    plagiarism_check_details = Column(
+        Unicode,
+        nullable=True)
+
     @property
     def short_comment(self):
         """The first line of the comment."""
@@ -175,6 +185,15 @@ class Submission(Base):
 
         """
         return self.token is not None
+
+    def within_contest(self):
+        """Return if the submission was made during the contest.
+
+        return (bool): True if submitted during contest time, False otherwise.
+
+        """
+        contest = self.task.contest
+        return self.timestamp >= contest.start and self.timestamp <= contest.stop
 
 
 class File(Base):

@@ -37,6 +37,7 @@ var DataStore = new function () {
     self.contests = new Object();
     self.tasks = new Object();
     self.teams = new Object();
+    self.tags = new Object();
     self.users = new Object();
 
     self.contest_create = $.Callbacks();
@@ -48,6 +49,9 @@ var DataStore = new function () {
     self.team_create = $.Callbacks();
     self.team_update = $.Callbacks();
     self.team_delete = $.Callbacks();
+    self.tag_create = $.Callbacks();
+    self.tag_update = $.Callbacks();
+    self.tag_delete = $.Callbacks();
     self.user_create = $.Callbacks();
     self.user_update = $.Callbacks();
     self.user_delete = $.Callbacks();
@@ -270,7 +274,7 @@ var DataStore = new function () {
                 for (var key in data) {
                     self.create_team(key, data[key]);
                 }
-                self.init_users();
+                self.init_tags();
             },
             error: function () {
                 console.error("Error while getting the list of teams");
@@ -348,6 +352,100 @@ var DataStore = new function () {
         self.team_count -= 1;
 
         self.team_delete.fire(key, old_data);
+    };
+
+
+    ////// Tag
+
+    self.tag_count = 0;
+
+    self.init_tags = function () {
+        $.ajax({
+            url: Config.get_tag_list_url(),
+            dataType: "json",
+            success: function (data, status, xhr) {
+                self.tag_init_time = parseFloat(xhr.getResponseHeader("Timestamp"));
+                for (var key in data) {
+                    self.create_tag(key, data[key]);
+                }
+                self.init_users();
+            },
+            error: function () {
+                console.error("Error while getting the list of tags");
+                self.update_network_status(4);
+            }
+        });
+    }
+
+    self.tag_listener = function (event) {
+        var cmd = event.data.split(" ");
+        if (cmd[0] == "create") {
+            $.ajax({
+                url: Config.get_tag_read_url(cmd[1]),
+                dataType: "json",
+                success: function (data) {
+                    self.create_tag(cmd[1], data);
+                },
+                error: function () {
+                    console.error("Error while getting tag " + cmd[1]);
+                    self.es.close();
+                    self.update_network_status(4);
+                }
+            });
+        } else if (cmd[0] == "update") {
+            $.ajax({
+                url: Config.get_tag_read_url(cmd[1]),
+                dataType: "json",
+                success: function (data) {
+                    self.update_tag(cmd[1], data);
+                },
+                error: function () {
+                    console.error("Error while getting tag " + cmd[1]);
+                    self.es.close();
+                    self.update_network_status(4);
+                }
+            });
+        } else if (cmd[0] == "delete") {
+            self.delete_tag(cmd[1]);
+        }
+    };
+
+    self.create_tag = function (key, data) {
+        data["key"] = key;
+        self.tags[key] = data;
+
+        console.info("Created tag " + key);
+        console.log(data);
+
+        self.tag_count += 1;
+
+        self.tag_create.fire(key, data);
+    };
+
+    self.update_tag = function (key, data) {
+        var old_data = self.tags[key];
+
+        data["key"] = key;
+        self.tags[key] = data;
+
+        console.info("Updated tag " + key);
+        console.log(old_data);
+        console.log(data);
+
+        self.tag_update.fire(key, old_data, data);
+    };
+
+    self.delete_tag = function (key) {
+        var old_data = self.tags[key];
+
+        delete self.tags[key];
+
+        console.info("Deleted tag " + key);
+        console.log(old_data);
+
+        self.tag_count -= 1;
+
+        self.tag_delete.fire(key, old_data);
     };
 
 
@@ -810,6 +908,7 @@ var DataStore = new function () {
             self.last_event_id = Math.round(Math.min(self.contest_init_time,
                                                      self.task_init_time,
                                                      self.team_init_time,
+                                                     self.tag_init_time,
                                                      self.user_init_time,
                                                      self.score_init_time) * 1000000).toString(16);
         }
@@ -841,6 +940,13 @@ var DataStore = new function () {
             var timestamp = parseInt(event.lastEventId, 16) / 1000000;
             if (timestamp > self.team_init_time) {
                 self.team_listener(event);
+            }
+            self.last_event_id = event.lastEventId;
+        }, false);
+        self.es.addEventListener("tag", function (event) {
+            var timestamp = parseInt(event.lastEventId, 16) / 1000000;
+            if (timestamp > self.tag_init_time) {
+                self.tag_listener(event);
             }
             self.last_event_id = event.lastEventId;
         }, false);

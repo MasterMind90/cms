@@ -173,10 +173,37 @@
                  dataset_id=shown_dataset.id) }}
         </td>
       </tr>
+      <tr>
+        <td>Plagiarism Check</td>
+        <td>
+          {% if s.plagiarism_check_result is not none %}
+            {{ s.plagiarism_check_result }}
+          {% else %}
+            Not checked
+          {% endif %}
+          <form action="{{ url("submission", s.id, shown_dataset.id, "plagiarism") }}" method="POST" style="display:inline;">
+            {{ xsrf_form_html|safe }}
+            <input type="submit"
+                   value="Run Check"
+{% if not admin.permission_all %}
+                   disabled
+{% endif %}
+                   />
+          </form>
+        </td>
+      </tr>
     </tbody>
   </table>
 
 </div>
+
+{% if s.plagiarism_check_details is not none %}
+<h2 id="title_plagiarism" class="toggling_on">Plagiarism Check Details</h2>
+<div id="plagiarism">
+  <p><strong>Result:</strong> {{ s.plagiarism_check_result }}</p>
+  <pre style="max-height: 300px; overflow: auto; background: #f5f5f5; padding: 8px; border: 1px solid #ddd;">{{ s.plagiarism_check_details }}</pre>
+</div>
+{% endif %}
 
 <h2 id="title_comment" class="toggling_on">Comment</h2>
 

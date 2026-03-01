@@ -202,6 +202,12 @@ var Scoreboard = new function () {
 <col class=\"l_name\"/> <col/><col/><col/><col/><col/><col/><col/><col/><col/> \
 <col class=\"team\"/>";
 
+        // Add tags column if there are tags
+        if (DataStore.tag_count > 0) {
+            result += " \
+<col class=\"tags\"/> <col/><col/>";
+        }
+
         var contests = DataStore.contest_list;
         for (var i in contests) {
             var contest = contests[i];
@@ -236,6 +242,12 @@ var Scoreboard = new function () {
     <th colspan=\"10\" class=\"f_name\">First Name</th> \
     <th colspan=\"10\" class=\"l_name\">Last Name</th> \
     <th class=\"team\">Team</th>";
+
+        // Add tags header if there are tags
+        if (DataStore.tag_count > 0) {
+            result += " \
+    <th colspan=\"3\" class=\"tags\">Tags</th>";
+        }
 
         var contests = DataStore.contest_list;
         for (var i in contests) {
@@ -289,6 +301,20 @@ var Scoreboard = new function () {
         } else {
             result += " \
     <td class=\"team\"></td>";
+        }
+
+        // Add tags column if there are tags
+        if (DataStore.tag_count > 0) {
+            var tag_html = "<td colspan=\"3\" class=\"tags\">";
+            if (user["tags"]) {
+                $.each(user["tags"], function(idx, tag_key) {
+                    if (DataStore.tags[tag_key] !== undefined) {
+                        tag_html += "<span class=\"tag-item\">" + escapeHTML(DataStore.tags[tag_key].name) + "</span>";
+                    }
+                });
+            }
+            tag_html += "</td>";
+            result += tag_html;
         }
 
         var contests = DataStore.contest_list;

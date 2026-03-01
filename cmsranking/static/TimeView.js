@@ -148,5 +148,14 @@ var TimeView = new function () {
         }
 
         $("#TimeView_time").text(time_str);
+
+        // Check if rankings are frozen
+        if (c != null && c['freeze_time'] != null && cur_time >= c['freeze_time']) {
+            $("#TimeView").addClass("frozen");
+            $("#TimeView_frozen").show();
+        } else {
+            $("#TimeView").removeClass("frozen");
+            $("#TimeView_frozen").hide();
+        }
     };
 };

@@ -99,6 +99,14 @@ class Contest(Base):
         nullable=False,
         default=True)
 
+    # Whether to allow submissions outside of contest time.
+    # Submissions made outside contest time will be evaluated but
+    # not counted in the ranking.
+    allow_submissions_outside_contest_time = Column(
+        Boolean,
+        nullable=False,
+        default=False)
+
     # Whether to prevent hidden participations to log in.
     block_hidden_participations = Column(
         Boolean,
@@ -211,6 +219,16 @@ class Contest(Base):
         DateTime,
         nullable=False,
         default=datetime(2030, 1, 1))
+
+    # Ranking freeze time. After this time, scores are not sent to the
+    # ranking server unless unfreeze is True.
+    freeze_time = Column(
+        DateTime,
+        nullable=True)
+    unfreeze = Column(
+        Boolean,
+        nullable=False,
+        default=False)
 
     # Timezone for the contest. All timestamps in CWS will be shown
     # using the timezone associated to the logged-in user or (if it's
