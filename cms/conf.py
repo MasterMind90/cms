@@ -162,6 +162,9 @@ class Config:
         self.max_jobs_per_user = 10
         self.pdf_printing_allowed = False
 
+        # Cluster management.
+        self.cluster_ssh_user = "cmsuser"
+
         self.log_dir = os.path.join("/", "var", "local", "log", "cms")
         self.cache_dir = os.path.join("/", "var", "local", "cache", "cms")
         self.data_dir = os.path.join("/", "var", "local", "lib", "cms")

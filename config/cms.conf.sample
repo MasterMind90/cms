@@ -14,6 +14,10 @@
     "_help": "The user/group that CMS will be run as.",
     "cmsuser": "cmsuser",
 
+    "_help": "SSH user for cluster management commands (cmsClusterStart/Stop).",
+    "_help": "This user must have SSH key-based authentication set up to all hosts.",
+    "cluster_ssh_user": "cmsuser",
+
 
     "_section": "AsyncLibrary",
 
