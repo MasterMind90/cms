@@ -88,6 +88,7 @@ class Config:
 
         """
         self.async_config = async_config
+        self._config_file_path = None
 
         # System-wide
         self.cmsuser = "cmsuser"
@@ -194,10 +195,16 @@ class Config:
         """
         for conf_file in paths:
             if self._load_unique(conf_file):
+                self._config_file_path = conf_file
                 break
         else:
             logging.warning("No configuration file found: "
                             "falling back to default values.")
+
+    @property
+    def config_file_path(self):
+        """Return the path of the loaded configuration file, or None."""
+        return self._config_file_path
 
     def _load_unique(self, path):
         """Populate the Config class with everything that sits inside

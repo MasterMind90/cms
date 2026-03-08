@@ -26,6 +26,8 @@ gevent.monkey.patch_all()  # noqa
 
 import argparse
 import logging
+import os
+import socket
 import subprocess
 import sys
 import time
@@ -82,6 +84,114 @@ def ssh_execute(host, user, command):
         return False, "", "SSH command timed out"
     except Exception as e:
         return False, "", str(e)
+
+
+def scp_copy(host, user, local_path, remote_path):
+    """Copy a file to a remote host via SCP.
+
+    Args:
+        host: The hostname or IP to copy to
+        user: The SSH user
+        local_path: Local file path to copy
+        remote_path: Remote destination path
+
+    Returns:
+        Tuple of (success: bool, stdout: str, stderr: str)
+    """
+    scp_cmd = [
+        "scp",
+        "-o", "BatchMode=yes",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "ConnectTimeout=10",
+        local_path,
+        f"{user}@{host}:{remote_path}"
+    ]
+
+    try:
+        result = subprocess.run(
+            scp_cmd,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        return result.returncode == 0, result.stdout, result.stderr
+    except subprocess.TimeoutExpired:
+        return False, "", "SCP command timed out"
+    except Exception as e:
+        return False, "", str(e)
+
+
+def is_localhost(host):
+    """Check if the given host refers to the local machine.
+
+    Args:
+        host: Hostname or IP address to check
+
+    Returns:
+        True if host is localhost, False otherwise
+    """
+    localhost_names = {'localhost', '127.0.0.1', '::1'}
+
+    if host.lower() in localhost_names:
+        return True
+
+    try:
+        local_hostname = socket.gethostname()
+        if host.lower() == local_hostname.lower():
+            return True
+        local_fqdn = socket.getfqdn()
+        if host.lower() == local_fqdn.lower():
+            return True
+    except Exception:
+        pass
+
+    return False
+
+
+def distribute_config(config_path):
+    """Copy the config file to all ResourceService hosts.
+
+    Args:
+        config_path: Path to the local config file to copy
+
+    Returns:
+        Tuple of (success: bool, copied_count: int, total_count: int)
+    """
+    hosts = get_resource_service_hosts()
+    if not hosts:
+        logger.warning("No ResourceService hosts found for config distribution.")
+        return True, 0, 0
+
+    user = config.cluster_ssh_user
+
+    # Get unique hosts (multiple shards may be on same host)
+    unique_hosts = sorted(set(host for host, shard in hosts))
+
+    # Filter out localhost
+    remote_hosts = [h for h in unique_hosts if not is_localhost(h)]
+
+    if not remote_hosts:
+        logger.info("No remote hosts to copy config to (all hosts are localhost).")
+        return True, 0, len(unique_hosts)
+
+    logger.info("Copying config file to %d remote host(s)...", len(remote_hosts))
+
+    copied_count = 0
+    for host in remote_hosts:
+        logger.info("  Copying to %s...", host)
+
+        ok, out, err = scp_copy(host, user, config_path, config_path)
+
+        if ok:
+            logger.info("    Config copied successfully to %s", host)
+            copied_count += 1
+        else:
+            logger.error("    Failed to copy config to %s: %s",
+                        host, err.strip() or "Unknown error")
+            return False, copied_count, len(remote_hosts)
+
+    logger.info("Config copied to %d/%d remote hosts.", copied_count, len(remote_hosts))
+    return True, copied_count, len(remote_hosts)
 
 
 def start_with_tmux(host, user, contest_id, shard):
@@ -186,12 +296,15 @@ def stop_with_systemd(host, user):
     return ssh_execute(host, user, cmd)
 
 
-def cluster_start(contest_id, use_systemd=False):
+def cluster_start(contest_id, use_systemd=False, copy_config=True,
+                  config_path=None):
     """Start ResourceService on all configured cluster hosts.
 
     Args:
         contest_id: Contest ID to pass to ResourceService
         use_systemd: If True, use systemd --user; otherwise use tmux
+        copy_config: If True, copy config file to remote hosts first
+        config_path: Explicit path to config file (uses auto-detected if None)
 
     Returns:
         True if all hosts started successfully, False otherwise
@@ -200,6 +313,27 @@ def cluster_start(contest_id, use_systemd=False):
     if not hosts:
         logger.error("No ResourceService hosts found in configuration.")
         return False
+
+    # Copy config to remote hosts before starting services
+    if copy_config:
+        if config_path is None:
+            config_path = config.config_file_path
+            if config_path is None:
+                logger.error("Cannot determine config file path. "
+                           "Use --config-path to specify explicitly, "
+                           "or --no-copy-config to skip.")
+                return False
+
+        if not os.path.isfile(config_path):
+            logger.error("Config file not found: %s", config_path)
+            return False
+
+        logger.info("Config file: %s", config_path)
+
+        success, copied, total = distribute_config(config_path)
+        if not success:
+            logger.error("Config distribution failed. Aborting cluster start.")
+            return False
 
     user = config.cluster_ssh_user
     success_count = 0
@@ -284,10 +418,26 @@ def main_start():
         action="store_true",
         help="Use systemd --user instead of tmux"
     )
+    parser.add_argument(
+        "--no-copy-config",
+        action="store_true",
+        help="Skip copying config file to remote hosts before starting"
+    )
+    parser.add_argument(
+        "--config-path",
+        type=str,
+        default=None,
+        help="Explicit path to config file to copy (default: auto-detect)"
+    )
 
     args = parser.parse_args()
 
-    success = cluster_start(args.contest_id, args.systemd)
+    success = cluster_start(
+        args.contest_id,
+        use_systemd=args.systemd,
+        copy_config=not args.no_copy_config,
+        config_path=args.config_path
+    )
     return 0 if success else 1
 
 
