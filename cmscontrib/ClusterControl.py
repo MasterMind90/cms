@@ -30,6 +30,7 @@ import logging
 import os
 import re
 import socket
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -42,6 +43,22 @@ from cms.db import is_contest_id
 logger = logging.getLogger(__name__)
 
 TMUX_SESSION_NAME = "cms"
+
+
+def resolve_cms_command_path(command_name):
+    """Resolve the full path of a CMS command using the current environment.
+
+    This allows venv support by finding the command path locally (where the
+    venv is activated) and using that absolute path on remote hosts (which
+    have the venv installed at the same path).
+
+    Args:
+        command_name: Name of the command to resolve (e.g., 'cmsResourceService')
+
+    Returns:
+        The absolute path to the command, or None if not found
+    """
+    return shutil.which(command_name)
 
 
 def get_resource_service_hosts():
@@ -294,7 +311,7 @@ def distribute_config(config_path):
     return True, copied_count, len(remote_hosts)
 
 
-def start_with_tmux(host, user, contest_id, shard):
+def start_with_tmux(host, user, contest_id, shard, resource_service_path):
     """Start ResourceService in a tmux session on the remote host.
 
     If a tmux session named 'cms' exists, it sends Ctrl-C to stop any
@@ -306,6 +323,7 @@ def start_with_tmux(host, user, contest_id, shard):
         user: SSH user
         contest_id: Contest ID to pass to ResourceService
         shard: The shard number for this host
+        resource_service_path: Full path to cmsResourceService executable
 
     Returns:
         Tuple of (success: bool, stdout: str, stderr: str)
@@ -313,7 +331,7 @@ def start_with_tmux(host, user, contest_id, shard):
     check_cmd = f"tmux has-session -t {TMUX_SESSION_NAME} 2>/dev/null"
     session_exists, _, _ = ssh_execute(host, user, check_cmd)
 
-    resource_cmd = f"cmsResourceService {shard} -a {contest_id}"
+    resource_cmd = f"{resource_service_path} {shard} -a {contest_id}"
 
     if session_exists:
         commands = [
@@ -323,12 +341,12 @@ def start_with_tmux(host, user, contest_id, shard):
         ]
         full_cmd = " && ".join(commands)
     else:
-        full_cmd = f"tmux new-session -d -s {TMUX_SESSION_NAME} '{resource_cmd}'"
+        full_cmd = f"tmux new-session -d -s {TMUX_SESSION_NAME} && tmux send-keys -t {TMUX_SESSION_NAME} '{resource_cmd}' Enter"
 
     return ssh_execute(host, user, full_cmd)
 
 
-def start_with_systemd(host, user, contest_id, shard):
+def start_with_systemd(host, user, contest_id, shard, resource_service_path):
     """Start ResourceService using systemd user service.
 
     Creates or updates the systemd user service file and restarts it.
@@ -338,6 +356,7 @@ def start_with_systemd(host, user, contest_id, shard):
         user: SSH user
         contest_id: Contest ID to pass to ResourceService
         shard: The shard number for this host
+        resource_service_path: Full path to cmsResourceService executable
 
     Returns:
         Tuple of (success: bool, stdout: str, stderr: str)
@@ -348,7 +367,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/env cmsResourceService {shard} -a {contest_id}
+ExecStart={resource_service_path} {shard} -a {contest_id}
 Restart=on-failure
 RestartSec=5
 
@@ -425,6 +444,14 @@ def cluster_start(contest_id, use_systemd=False, copy_config=True,
             return False
         logger.info("Contest %d is available.", contest_id_int)
 
+    # Resolve cmsResourceService path (supports venv)
+    resource_service_path = resolve_cms_command_path("cmsResourceService")
+    if resource_service_path is None:
+        logger.error("cmsResourceService not found in PATH. "
+                    "Ensure the command is available or activate your venv.")
+        return False
+    logger.info("Using cmsResourceService at: %s", resource_service_path)
+
     hosts = get_resource_service_hosts()
     if not hosts:
         logger.error("No ResourceService hosts found in configuration.")
@@ -462,9 +489,9 @@ def cluster_start(contest_id, use_systemd=False, copy_config=True,
         logger.info("  Starting on %s (shard %d)...", host, shard)
 
         if use_systemd:
-            ok, out, err = start_with_systemd(host, user, contest_id, shard)
+            ok, out, err = start_with_systemd(host, user, contest_id, shard, resource_service_path)
         else:
-            ok, out, err = start_with_tmux(host, user, contest_id, shard)
+            ok, out, err = start_with_tmux(host, user, contest_id, shard, resource_service_path)
 
         if ok:
             logger.info("    Started successfully on %s", host)
