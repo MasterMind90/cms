@@ -25,11 +25,14 @@ import gevent.monkey
 gevent.monkey.patch_all()  # noqa
 
 import argparse
+import json
 import logging
 import os
+import re
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 
 from cms import config, async_config, utf8_decoder
@@ -148,8 +151,84 @@ def is_localhost(host):
     return False
 
 
+def get_local_ip():
+    """Get the local IP address that remote hosts can reach.
+
+    Uses the socket connection trick to determine the outbound IP address,
+    which is the IP that remote hosts should use to connect back to this host.
+
+    Returns:
+        The local IP address as a string
+    """
+    try:
+        # Create a socket to determine the outbound IP
+        # This doesn't actually send any data
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        # Fallback to hostname resolution
+        return socket.gethostbyname(socket.gethostname())
+
+
+def rewrite_database_host_in_config(config_path, new_host):
+    """Create a modified config file with database host replaced.
+
+    Reads the config file, replaces localhost/127.0.0.1 in the database
+    connection string with the specified host, and writes to a temp file.
+
+    Args:
+        config_path: Path to the original config file
+        new_host: The host IP to use instead of localhost
+
+    Returns:
+        Tuple of (temp_file_path, original_host) or (None, None) if no change needed
+    """
+    try:
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+    except Exception as e:
+        logger.error("Failed to read config file for rewriting: %s", e)
+        return None, None
+
+    database_str = config_data.get('database', '')
+    if not database_str:
+        logger.warning("No 'database' field found in config, skipping rewrite.")
+        return None, None
+
+    # Pattern to match localhost or 127.0.0.1 in the database connection string
+    # Format: postgresql+psycopg2://user:pass@host:port/dbname
+    pattern = r'(@)(localhost|127\.0\.0\.1)(:\d+|/)'
+    match = re.search(pattern, database_str)
+
+    if not match:
+        logger.info("Database host is not localhost, no rewrite needed.")
+        return None, None
+
+    original_host = match.group(2)
+    new_database_str = re.sub(pattern, rf'\g<1>{new_host}\g<3>', database_str)
+
+    config_data['database'] = new_database_str
+
+    # Create a temporary file with the modified config
+    try:
+        fd, temp_path = tempfile.mkstemp(suffix='.conf', prefix='cms_cluster_')
+        with os.fdopen(fd, 'w') as f:
+            json.dump(config_data, f, indent=4)
+        return temp_path, original_host
+    except Exception as e:
+        logger.error("Failed to create temporary config file: %s", e)
+        return None, None
+
+
 def distribute_config(config_path):
     """Copy the config file to all ResourceService hosts.
+
+    Before copying, rewrites the database connection string to replace
+    localhost with the local machine's IP address, so remote hosts can
+    connect back to the database.
 
     Args:
         config_path: Path to the local config file to copy
@@ -174,21 +253,41 @@ def distribute_config(config_path):
         logger.info("No remote hosts to copy config to (all hosts are localhost).")
         return True, 0, len(unique_hosts)
 
+    # Rewrite database host in config for remote hosts
+    local_ip = get_local_ip()
+    temp_config_path, original_host = rewrite_database_host_in_config(
+        config_path, local_ip)
+
+    if temp_config_path:
+        logger.info("Rewriting database host: %s -> %s", original_host, local_ip)
+        source_path = temp_config_path
+    else:
+        # No rewrite needed or failed, use original config
+        source_path = config_path
+
     logger.info("Copying config file to %d remote host(s)...", len(remote_hosts))
 
     copied_count = 0
-    for host in remote_hosts:
-        logger.info("  Copying to %s...", host)
+    try:
+        for host in remote_hosts:
+            logger.info("  Copying to %s...", host)
 
-        ok, out, err = scp_copy(host, user, config_path, config_path)
+            ok, out, err = scp_copy(host, user, source_path, config_path)
 
-        if ok:
-            logger.info("    Config copied successfully to %s", host)
-            copied_count += 1
-        else:
-            logger.error("    Failed to copy config to %s: %s",
-                        host, err.strip() or "Unknown error")
-            return False, copied_count, len(remote_hosts)
+            if ok:
+                logger.info("    Config copied successfully to %s", host)
+                copied_count += 1
+            else:
+                logger.error("    Failed to copy config to %s: %s",
+                            host, err.strip() or "Unknown error")
+                return False, copied_count, len(remote_hosts)
+    finally:
+        # Clean up temporary config file
+        if temp_config_path and os.path.exists(temp_config_path):
+            try:
+                os.remove(temp_config_path)
+            except Exception:
+                pass
 
     logger.info("Config copied to %d/%d remote hosts.", copied_count, len(remote_hosts))
     return True, copied_count, len(remote_hosts)
