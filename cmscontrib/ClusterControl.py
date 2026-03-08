@@ -472,6 +472,11 @@ def cluster_start(contest_id, use_systemd=False, copy_config=True,
         else:
             logger.error("    Failed on %s: %s", host, err.strip() or "Unknown error")
 
+        if out.strip():
+            logger.info("    stdout: %s", out.strip())
+        if err.strip():
+            logger.info("    stderr: %s", err.strip())
+
     logger.info("Started %d/%d hosts successfully.", success_count, len(hosts))
     return success_count == len(hosts)
 
@@ -501,15 +506,20 @@ def cluster_stop(use_systemd=False):
         logger.info("  Stopping on %s (shard %d)...", host, shard)
 
         if use_systemd:
-            ok, _, err = stop_with_systemd(host, user)
+            ok, out, err = stop_with_systemd(host, user)
         else:
-            ok, _, err = stop_with_tmux(host, user)
+            ok, out, err = stop_with_tmux(host, user)
 
         if ok:
             logger.info("    Stopped successfully on %s", host)
             success_count += 1
         else:
             logger.error("    Failed on %s: %s", host, err.strip() or "Unknown error")
+
+        if out.strip():
+            logger.info("    stdout: %s", out.strip())
+        if err.strip():
+            logger.info("    stderr: %s", err.strip())
 
     logger.info("Stopped %d/%d hosts successfully.", success_count, len(hosts))
     return success_count == len(hosts)
