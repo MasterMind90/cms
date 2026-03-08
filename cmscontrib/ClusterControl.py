@@ -323,7 +323,7 @@ def start_with_tmux(host, user, contest_id, shard):
         ]
         full_cmd = " && ".join(commands)
     else:
-        full_cmd = f"tmux new-session -d -s {TMUX_SESSION_NAME} '{resource_cmd}'"
+        full_cmd = f"tmux new-session -d -s {TMUX_SESSION_NAME} && tmux send-keys -t {TMUX_SESSION_NAME} '{resource_cmd}' Enter"
 
     return ssh_execute(host, user, full_cmd)
 
