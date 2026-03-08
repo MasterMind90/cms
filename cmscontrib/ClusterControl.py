@@ -36,6 +36,7 @@ import tempfile
 import time
 
 from cms import config, async_config, utf8_decoder
+from cms.db import is_contest_id
 
 
 logger = logging.getLogger(__name__)
@@ -408,6 +409,22 @@ def cluster_start(contest_id, use_systemd=False, copy_config=True,
     Returns:
         True if all hosts started successfully, False otherwise
     """
+    # Check if contest exists (skip for "ALL" mode)
+    if contest_id != "ALL":
+        try:
+            contest_id_int = int(contest_id)
+        except ValueError:
+            logger.error("Invalid contest id '%s'. Must be an integer or 'ALL'.",
+                        contest_id)
+            return False
+
+        if not is_contest_id(contest_id_int):
+            logger.error("Contest with id %d does not exist. "
+                        "Please check the contest id and try again.",
+                        contest_id_int)
+            return False
+        logger.info("Contest %d is available.", contest_id_int)
+
     hosts = get_resource_service_hosts()
     if not hosts:
         logger.error("No ResourceService hosts found in configuration.")
