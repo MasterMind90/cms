@@ -606,3 +606,32 @@ class ProxyService(TriggeredService):
                         submission.get_result().scored():
                     for operation in self.operations_for_score(submission):
                         self.enqueue(operation)
+
+    @rpc_method
+    def update_all(self):
+        """Refresh ranking server with all submissions.
+
+        A utility RPC method that updates the ranking server with all
+        scored submission data. This is useful for manually syncing the
+        ranking server when needed (e.g., after a ranking server restart).
+
+        """
+        logger.info("Refreshing ranking server with all submissions.")
+        self.reinitialize()
+
+        with SessionGen() as session:
+            submissions = session.query(Submission)\
+                .join(Participation)\
+                .filter(Participation.contest_id == self.contest_id)\
+                .all()
+
+            for submission in submissions:
+                # Update RWS with scored, non-hidden, official submissions.
+                if not submission.participation.hidden and \
+                        submission.official and \
+                        submission.get_result() is not None and \
+                        submission.get_result().scored():
+                    for operation in self.operations_for_score(submission):
+                        self.enqueue(operation)
+
+        logger.info("Ranking server refresh complete.")

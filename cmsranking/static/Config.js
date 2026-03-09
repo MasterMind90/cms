@@ -90,6 +90,11 @@ var Config = new function () {
     self.user_whitelist = null;
     self.user_blacklist = null;
 
+    // UI display options (loaded from server)
+    self.show_team = true;
+    self.first_name_is_name = false;
+    self.show_full_task_name = false;
+
     /**
      * Fetch configuration from the server.
      * @param {Function} callback - Called when config is loaded

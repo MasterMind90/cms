@@ -131,11 +131,38 @@ class Score:
         else:
             raise ValueError("Unexpected score mode '%s'" % self._score_mode)
 
-        if score != self.get_score():
-            self._history.append((change.time, score))
+        # Determine if we should append to history
+        append_history = False
+        if self._score_mode == SCORE_MODE_MAX:
+            # For MAX mode, update if score is better, or if score is same but extra/time changed
+            if score > self.get_score():
+                append_history = True
+            elif score == self.get_score() and change.extra != self.get_extra():
+                append_history = True
+            elif score == self.get_score() and change.time > self.get_time():
+                append_history = True
+        else:
+            # For other modes, update if score changed
+            append_history = (score != self.get_score())
+
+        if append_history:
+            self._history.append((change.time, score, change.extra or []))
+
+    def get_last(self):
+        """Return the last submitted submission."""
+        return self._last
+
+    def get_extra(self):
+        """Return extra data from the last score."""
+        return self._history[-1][2] if len(self._history) > 0 else []
 
     def get_score(self):
+        """Return the current score."""
         return self._history[-1][1] if len(self._history) > 0 else 0.0
+
+    def get_time(self):
+        """Return the time of the last score update."""
+        return self._history[-1][0] if len(self._history) > 0 else 0
 
     def reset_history(self):
         # Delete everything except the submissions and the subchanges.

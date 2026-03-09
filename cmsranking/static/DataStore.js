@@ -699,7 +699,7 @@ var DataStore = new function () {
         }
     };
 
-    self.set_score = function (u_id, t_id, new_t_score) {
+    self.set_score = function (u_id, t_id, new_t_score, extras, time) {
         /* It may be "nice" to check that the user and task do actually exists,
            even if the server should already ensure it!
          */
@@ -713,6 +713,14 @@ var DataStore = new function () {
         new_t_score = round(new_t_score, task["score_precision"]);
         var old_t_score = user["t_" + t_id];
         user["t_" + t_id] = new_t_score;
+
+        // Store extra data and time if provided
+        if (extras !== undefined) {
+            user["te_" + t_id] = extras;
+        }
+        if (time !== undefined) {
+            user["tt_" + t_id] = time;
+        }
 
         // Contest
         var new_c_score = 0.0;  // = max(user's score on t for t in contest.tasks)
