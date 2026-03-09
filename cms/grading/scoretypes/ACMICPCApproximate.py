@@ -140,7 +140,7 @@ class ACMICPCApproximate(ScoreTypeAlone):
         base, penalty, time_decay = self.params()
         public_score = base
         score = base
-        return score, public_score, []
+        return score, public_score, ["Wrong Attempts", "Time Penalty"]
 
     @staticmethod
     def format_score(score, max_score, unused_score_details,
@@ -239,11 +239,13 @@ class ACMICPCApproximate(ScoreTypeAlone):
             public_details = details.copy()
             public_details["testcases"] = public_testcases
 
-            # For ranking web server
-            ranking_details = details.copy()
-            del ranking_details["testcases"]
+            # For ranking web server: return string values matching the headers
+            ranking_details = [
+                "%d" % before_count,  # Wrong Attempts
+                "%g" % time_penalty,  # Time Penalty
+            ]
 
-            return score, details, public_score, public_details, [ranking_details]
+            return score, details, public_score, public_details, ranking_details
 
     def get_public_outcome(self, outcome):
         """Return a public outcome from an outcome.
