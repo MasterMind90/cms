@@ -71,7 +71,7 @@ class Store:
 
         """
         try:
-            os.mkdir(self._path)
+            os.makedirs(self._path)
         except OSError:
             # it's ok: it means the directory already exists
             pass
@@ -181,12 +181,14 @@ class Store:
 
         # update entity
         with LOCK:
+            old_item = self._store[key]
             item = self._entity()
+            # Some data may be missing from ProxyService. Dont remove
+            item.set(old_item.get())
             item.set(data)
             if not item.consistent(self._all_stores):
                 raise InvalidData("Inconsistent data")
             item.key = key
-            old_item = self._store[key]
             self._store[key] = item
             # notify callbacks
             for callback in self._update_callbacks:
@@ -225,13 +227,16 @@ class Store:
                     if not re.match('[A-Za-z0-9_]+', key):
                         raise InvalidData("Invalid key")
                     item = self._entity()
+                    # Some data may be missing from ProxyService. Dont remove
+                    if key in self._store:
+                        item.set(self._store[key].get())
                     item.set(value)
                     if not item.consistent(self._all_stores):
                         raise InvalidData("Inconsistent data")
                     item.key = key
                     item_dict[key] = item
                 except InvalidData as exc:
-                    raise InvalidData("[entity %s] %s" % (key, exc))
+                    logger.error("[entity %s] %s" % (key, exc), exc_info=True)
 
             for key, value in item_dict.items():
                 is_new = key not in self._store

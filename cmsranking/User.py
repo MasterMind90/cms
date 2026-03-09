@@ -61,7 +61,6 @@ class User(Entity):
             raise InvalidData(str(exc))
 
     def set(self, data):
-        self.validate(data)
         self.f_name = data['f_name']
         self.l_name = data['l_name']
         self.team = data['team']

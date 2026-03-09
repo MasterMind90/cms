@@ -268,6 +268,13 @@ class DataWatcher(EventSource):
         stores["team"].add_delete_callback(
             functools.partial(self.callback, "team", "delete"))
 
+        stores["tag"].add_create_callback(
+            functools.partial(self.callback, "tag", "create"))
+        stores["tag"].add_update_callback(
+            functools.partial(self.callback, "tag", "update"))
+        stores["tag"].add_delete_callback(
+            functools.partial(self.callback, "tag", "delete"))
+
         stores["user"].add_create_callback(
             functools.partial(self.callback, "user", "create"))
         stores["user"].add_update_callback(
@@ -280,9 +287,16 @@ class DataWatcher(EventSource):
     def callback(self, entity, event, key, *args):
         self.send(entity, "%s %s" % (event, key))
 
-    def score_callback(self, user, task, score):
+    def score_callback(self, user, task, score, extra, time):
         # FIXME Use score_precision.
-        self.send("score", "%s %s %0.2f" % (user, task, score))
+        response = {
+            "user": user,
+            "task": task,
+            "score": score,
+            "time": time,
+            "extra": extra
+        }
+        self.send("score", json.dumps(response))
 
 
 class SubListHandler:
@@ -374,8 +388,12 @@ class ScoreHandler:
         result = dict()
         for u_id, tasks in self.scoring_store._scores.items():
             for t_id, score in tasks.items():
-                if score.get_score() > 0.0:
-                    result.setdefault(u_id, dict())[t_id] = score.get_score()
+                if score.get_score() > 0.0 or (score.get_extra() and score.get_extra() != []):
+                    result.setdefault(u_id, dict())[t_id] = {
+                        "score": score.get_score(),
+                        "extra": score.get_extra(),
+                        "time": score.get_time()
+                    }
 
         response = Response()
         response.status_code = 200
