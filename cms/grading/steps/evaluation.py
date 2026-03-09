@@ -50,14 +50,14 @@ EVALUATION_MESSAGES = MessageCollection([
                  N_("Your submission ran and gave the partially correct "
                     "answer")),
     HumanMessage("wrong",
-                 N_("Output isn't correct"),
+                 N_("Wrong Answer"),
                  N_("Your submission ran, but gave the wrong answer")),
     HumanMessage("nooutput",
                  N_("Evaluation didn't produce file %s"),
                  N_("Your submission ran, but did not write on the "
                     "correct output file")),
     HumanMessage("timeout",
-                 N_("Execution timed out"),
+                 N_("Time limit exceeded"),
                  N_("Your submission used too much CPU time.")),
     HumanMessage("walltimeout",
                  N_("Execution timed out (wall clock limit exceeded)"),
