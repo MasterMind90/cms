@@ -51,6 +51,12 @@ var TimeView = new function () {
             $("#TimeView_selector").removeClass("open");
         });
 
+        $("#TimeView_selector_freeze").click(function () {
+            self.status = 3;
+            self.on_timer();
+            $("#TimeView_selector").removeClass("open");
+        });
+
         $("#TimeView_selector_remaining").click(function () {
             self.status = 1;
             self.on_timer();
@@ -127,15 +133,19 @@ var TimeView = new function () {
                 $("#TimeView").removeClass("pre_cont post_cont");
                 $("#TimeView").addClass("cont");
                 if (self.status == 2) {
-                    $("#TimeView").removeClass("elapsed remaining");
+                    $("#TimeView").removeClass("elapsed remaining freeze");
                     $("#TimeView").addClass("current");
                     full_time = true;
+                } else if (self.status == 3) {
+                    $("#TimeView").removeClass("elapsed remaining current");
+                    $("#TimeView").addClass("freeze");
+                    time = cur_time - c['freeze_time'];
                 } else if (self.status == 1) {
-                    $("#TimeView").removeClass("elapsed current");
+                    $("#TimeView").removeClass("elapsed current freeze");
                     $("#TimeView").addClass("remaining");
                     time = cur_time - c['end'];
                 } else {
-                    $("#TimeView").removeClass("remaining current");
+                    $("#TimeView").removeClass("remaining current freeze");
                     $("#TimeView").addClass("elapsed");
                     time = cur_time - c['begin'];
                 }

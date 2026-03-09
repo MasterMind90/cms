@@ -60,6 +60,11 @@ class Config:
         self.user_whitelist = None
         self.user_blacklist = None
 
+        # UI display options
+        self.show_team = True
+        self.first_name_is_name = False
+        self.show_full_task_name = False
+
         # Buffers
         self.buffer_size = 100  # Needs to be strictly positive.
 
@@ -179,4 +184,7 @@ class Config:
         return {
             "user_whitelist": self.user_whitelist,
             "user_blacklist": self.user_blacklist,
+            "show_team": self.show_team,
+            "first_name_is_name": self.first_name_is_name,
+            "show_full_task_name": self.show_full_task_name,
         }

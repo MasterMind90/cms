@@ -40,6 +40,7 @@ var Scoreboard = new function () {
         self.tcols_el = $('#Scoreboard_cols');
         self.thead_el = $('#Scoreboard_head');
         self.tbody_el = $('#Scoreboard_body');
+        self.tag_filter_el = $('#Tag_filters');
 
         self.generate();
 
@@ -69,11 +70,39 @@ var Scoreboard = new function () {
 
 
     /**
-     * Check if a user should be visible based on whitelist/blacklist.
+     * Create tag filter checkboxes for filtering users by tag.
+     */
+    self.make_tag_filter_checkbox = function () {
+        self.tag_filter_el.empty();
+        for (var tag_id in DataStore.tags) {
+            var tag = DataStore.tags[tag_id];
+            var el = $("<label><input type=\"checkbox\" data-tag=\"" + tag_id + "\" />" + escapeHTML(tag.name) + "</label>");
+            el.find("input").change(self.filter_users);
+            self.tag_filter_el.append(el);
+        }
+    };
+
+
+    /**
+     * Check if a user should be visible based on whitelist/blacklist and tag filters.
      * @param {Object} user - The user object to check
      */
     self.apply_user_filter = function (user) {
         var visible = true;
+
+        // Check tag filters (all selected tags must be present on user)
+        var tag_filters = [];
+        self.tag_filter_el.find("[type=checkbox]:checked").each(function () {
+            tag_filters.push($(this).data("tag"));
+        });
+
+        for (var i = 0; i < tag_filters.length; i++) {
+            var tag = tag_filters[i];
+            if (user.tags && user.tags.indexOf(tag) === -1) {
+                visible = false;
+                break;
+            }
+        }
 
         // Check whitelist (if set, user must match)
         if (Config.user_whitelist) {
@@ -99,6 +128,7 @@ var Scoreboard = new function () {
 
 
     self.generate = function () {
+        self.make_tag_filter_checkbox();
         self.tcols_el.html(self.make_cols());
         self.thead_el.html(self.make_head());
 
@@ -226,8 +256,11 @@ var Scoreboard = new function () {
 <col class=\"score contest\" data-contest=\"" + c_id + "\" data-sort_key=\"c_" + c_id + "\"/> <col/><col/><col/>";
         }
 
-        result += " \
+        // Only show global score column if there are multiple contests
+        if (contests.length !== 1) {
+            result += " \
 <col class=\"score global\" data-sort_key=\"global\"/> <col/><col/><col/><col/>";
+        }
 
         return result;
     };
@@ -267,8 +300,13 @@ var Scoreboard = new function () {
     <th colspan=\"4\" class=\"score contest\" data-contest=\"" + c_id + "\" data-sort_key=\"c_" + c_id + "\"><abbr title=\"" + escapeHTML(contest["name"]) + "\">" + escapeHTML(contest["name"]) + "</abbr></th>";
         }
 
+        // Only show global score column if there are multiple contests
+        if (contests.length !== 1) {
+            result += " \
+    <th colspan=\"5\" class=\"score global\" data-sort_key=\"global\">Global</th>";
+        }
+
         result += " \
-    <th colspan=\"5\" class=\"score global\" data-sort_key=\"global\">Global</th> \
 </tr>";
 
         return result;
@@ -337,9 +375,14 @@ var Scoreboard = new function () {
     <td colspan=\"4\" class=\"score contest " + score_class + "\" data-contest=\"" + c_id + "\" data-sort_key=\"c_" + c_id + "\">" + round_to_str(user["c_" + c_id], contest["score_precision"]) + "</td>";
         }
 
-        var score_class = self.get_score_class(user["global"], DataStore.global_max_score);
+        // Only show global score column if there are multiple contests
+        if (contests.length !== 1) {
+            var score_class = self.get_score_class(user["global"], DataStore.global_max_score);
+            result += " \
+    <td colspan=\"5\" class=\"score global " + score_class + "\" data-sort_key=\"global\">" + round_to_str(user["global"], DataStore.global_score_precision) + "</td>";
+        }
+
         result += " \
-    <td colspan=\"5\" class=\"score global " + score_class + "\" data-sort_key=\"global\">" + round_to_str(user["global"], DataStore.global_score_precision) + "</td> \
 </tr>";
 
         return result;
