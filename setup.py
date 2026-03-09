@@ -166,6 +166,9 @@ setup(
             "cmsTelegramBot=cmscontrib.TelegramBot:main",
             "cmsClusterStart=cmscontrib.ClusterControl:main_start",
             "cmsClusterStop=cmscontrib.ClusterControl:main_stop",
+            "cmsExportSummary=cmscontrib.ExportSummary:main",
+            "cmsJsonUserImporter=cmscontrib.JsonUserImporter:main",
+            "cmsRemoveAllUser=cmscontrib.RemoveAllUser:main",
         ],
         "cms.grading.tasktypes": [
             "Batch=cms.grading.tasktypes.Batch:Batch",
