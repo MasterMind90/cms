@@ -117,6 +117,18 @@ class Config:
 
         add_file_handler(self.log_dir)
 
+    def to_clientside(self):
+        """Pass configuration to clientside.
+
+        """
+        return {
+            "user_whitelist": self.user_whitelist,
+            "user_blacklist": self.user_blacklist,
+            "show_team": self.show_team,
+            "first_name_is_name": self.first_name_is_name,
+            "show_full_task_name": self.show_full_task_name,
+        }
+
     def _load_many(self, conf_paths):
         """Load the first existing config file among the given ones.
 

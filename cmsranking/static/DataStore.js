@@ -679,7 +679,8 @@ var DataStore = new function () {
                 self.score_init_time = parseFloat(xhr.getResponseHeader("Timestamp"));
                 for (var u_id in data) {
                     for (var t_id in data[u_id]) {
-                        self.set_score(u_id, t_id, data[u_id][t_id]);
+                        self.set_score(u_id, t_id, data[u_id][t_id].score,
+                                     data[u_id][t_id].extra, data[u_id][t_id].time);
                     }
                 }
                 self.init_ranks();
@@ -692,11 +693,8 @@ var DataStore = new function () {
     };
 
     self.score_listener = function (event) {
-        var data = event.data.split("\n");
-        for (var idx in data) {
-            var line = data[idx].split(" ");
-            self.set_score(line[0], line[1], parseFloat(line[2]));
-        }
+        var data = JSON.parse(event.data);
+        self.set_score(data.user, data.task, data.score, data.extra, data.time);
     };
 
     self.set_score = function (u_id, t_id, new_t_score, extras, time) {
