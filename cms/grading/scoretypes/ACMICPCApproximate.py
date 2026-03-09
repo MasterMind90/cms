@@ -138,8 +138,8 @@ class ACMICPCApproximate(ScoreTypeAlone):
     def max_scores(self):
         """See ScoreType.max_score."""
         base, penalty, time_decay = self.params()
-        public_score = base
-        score = base
+        public_score = float(base)
+        score = float(base)
         return score, public_score, ["Wrong Attempts", "Time Penalty"]
 
     @staticmethod
