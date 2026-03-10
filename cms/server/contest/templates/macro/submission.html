@@ -150,7 +150,7 @@ submissions_download_allowed (bool): whether to allow users to download
       <img class="details" src="{{ url("static", "loading.gif") }}" />
 {% elif status == SubmissionResult.COMPILATION_FAILED %}
         {% trans %}Compilation failed{% endtrans %}
-        <a class="details">{% trans %}details{% endtrans %}</a>
+        {% if contest.show_submission_details %}<a class="details">{% trans %}details{% endtrans %}</a>{% endif %}
 {% elif status == SubmissionResult.EVALUATING %}
         {% trans %}Evaluating...{% endtrans %}
       <img class="details" src="{{ url("static", "loading.gif") }}" />
@@ -159,7 +159,7 @@ submissions_download_allowed (bool): whether to allow users to download
       <img class="details" src="{{ url("static", "loading.gif") }}" />
 {% elif status == SubmissionResult.SCORED %}
         {% trans %}Evaluated{% endtrans %}
-        <a class="details">{% trans %}details{% endtrans %}</a>
+        {% if contest.show_submission_details %}<a class="details">{% trans %}details{% endtrans %}</a>{% endif %}
 {% endif %}
     </td>
 {% if score_type is defined and score_type.max_public_score > 0 %}

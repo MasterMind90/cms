@@ -291,6 +291,9 @@ class SubmissionDetailsHandler(ContestHandler):
     @actual_phase_required(0, 3)
     @multi_contest
     def get(self, task_name, submission_num):
+        if not self.contest.show_submission_details:
+            raise tornado_web.HTTPError(403)
+
         task = self.get_task(task_name)
         if task is None:
             raise tornado_web.HTTPError(404)

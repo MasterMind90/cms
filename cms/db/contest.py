@@ -87,6 +87,14 @@ class Contest(Base):
         nullable=False,
         default=True)
 
+    # Whether to show the submission details link to contestants.
+    # When False, contestants can only see the verdict (score/status) but
+    # cannot view which test cases failed.
+    show_submission_details = Column(
+        Boolean,
+        nullable=False,
+        default=True)
+
     # Whether the user question is enabled.
     allow_questions = Column(
         Boolean,

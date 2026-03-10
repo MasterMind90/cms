@@ -57,6 +57,15 @@
     </tr>
     <tr>
       <td>
+        <span class="info" title="Whether contestants can view submission details (e.g. which test cases failed). When unchecked, contestants only see the verdict (score/status) but cannot click through to see test case results."></span>
+        <label for="show_submission_details">Show submission details</label>
+      </td>
+      <td>
+        <input type="checkbox" id="show_submission_details" name="show_submission_details" {{ "checked" if contest.show_submission_details else "" }}/>
+      </td>
+    </tr>
+    <tr>
+      <td>
         <span class="info" title="Whether contestants can submit questions."></span>
         <label for="allow_questions">Allow questions</label>
       </td>
