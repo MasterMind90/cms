@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block core %}
+
+<div class="core_title">
+  <h1>Balloons</h1>
+</div>
+
+{% set pending = balloons | selectattr("delivered", "equalto", false) | list %}
+{% set delivered = balloons | selectattr("delivered", "equalto", true) | list %}
+
+<p>
+  <strong>{{ pending|length }}</strong> pending &nbsp;|&nbsp;
+  <strong>{{ delivered|length }}</strong> delivered &nbsp;|&nbsp;
+  <strong>{{ balloons|length }}</strong> total
+</p>
+
+{% if balloons|length == 0 %}
+<p>No balloons yet. Balloons appear here when a contestant gets their first Accepted submission on a task using ACMICPCApproximate scoring.</p>
+{% else %}
+
+<table class="bordered" style="width:100%; text-align:left;">
+  <thead>
+    <tr>
+      <th>Status</th>
+      <th>Contestant</th>
+      <th>Task</th>
+      <th>Color</th>
+      <th>Time Solved</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for balloon in balloons %}
+    <tr style="{{ "background:#f9f9f9;" if balloon.delivered else "background:#fffbe6; font-weight:bold;" }}">
+      <td>
+        {% if balloon.delivered %}
+        &#10003; Delivered
+        {% else %}
+        &#9888; Pending
+        {% endif %}
+      </td>
+      <td>
+        {{ balloon.participation.user.first_name }} {{ balloon.participation.user.last_name }}
+        <small>({{ balloon.participation.user.username }})</small>
+      </td>
+      <td>{{ balloon.task.title }} ({{ balloon.task.name }})</td>
+      <td>
+        {% if balloon.task.balloon_color %}
+        <span style="display:inline-block; width:20px; height:20px; background:{{ balloon.task.balloon_color }}; border:1px solid #888; vertical-align:middle; border-radius:50%;"></span>
+        {{ balloon.task.balloon_color }}
+        {% else %}
+        <em>no color set</em>
+        {% endif %}
+      </td>
+      <td>
+        {% if balloon.submission %}
+        {{ balloon.submission.timestamp.strftime("%H:%M:%S") }}
+        {% else %}
+        &mdash;
+        {% endif %}
+      </td>
+      <td>
+        <form action="{{ url("balloon", balloon.id, "deliver") }}" method="POST" style="display:inline;">
+          {{ xsrf_form_html|safe }}
+          <input type="submit" value="{{ "Mark Pending" if balloon.delivered else "Mark Delivered" }}" />
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endif %}
+
+{% endblock core %}

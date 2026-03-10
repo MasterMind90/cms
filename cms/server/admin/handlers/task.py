@@ -167,6 +167,8 @@ class TaskHandler(BaseHandler):
 
             self.get_string(attrs, "score_mode")
 
+            self.get_string(attrs, "balloon_color", empty=None)
+
             # Update the task.
             task.set_attrs(attrs)
 

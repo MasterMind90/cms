@@ -19,6 +19,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from .balloon import \
+    ContestBalloonsHandler, \
+    BalloonDeliverHandler
 from .admin import \
     AddAdminHandler, \
     AdminsHandler, \
@@ -155,6 +158,11 @@ HANDLERS = [
     (r"/contest/([0-9]+)/question/([0-9]+)/reply", QuestionReplyHandler),
     (r"/contest/([0-9]+)/question/([0-9]+)/ignore", QuestionIgnoreHandler),
     (r"/contest/([0-9]+)/question/([0-9]+)/claim", QuestionClaimHandler),
+
+    # Contest's balloons
+
+    (r"/contest/([0-9]+)/balloons", ContestBalloonsHandler),
+    (r"/balloon/([0-9]+)/deliver", BalloonDeliverHandler),
 
     # Contest's ranking
 

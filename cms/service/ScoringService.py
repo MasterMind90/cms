@@ -28,7 +28,8 @@
 import logging
 
 from cms import ServiceCoord, config
-from cms.db import SessionGen, Submission, Dataset, get_submission_results
+from cms.db import SessionGen, Submission, Dataset, get_submission_results, \
+    Balloon
 from cms.io import Executor, TriggeredService, rpc_method
 from cmscommon.datetime import make_datetime
 from .scoringoperations import ScoringOperation, get_operations
@@ -99,6 +100,25 @@ class ScoringExecutor(Executor):
                 submission_result.public_score_details, \
                 submission_result.ranking_score_details = \
                 score_type.compute_score(submission_result)
+
+            # Create a balloon record if this is the first accepted
+            # submission for this (contestant, task) on an ACMICPCApproximate
+            # active dataset.
+            if (dataset is submission.task.active_dataset
+                    and dataset.score_type == "ACMICPCApproximate"
+                    and submission_result.score is not None
+                    and submission_result.score > 0):
+                existing_balloon = session.query(Balloon)\
+                    .filter(Balloon.participation_id ==
+                            submission.participation_id)\
+                    .filter(Balloon.task_id == submission.task_id)\
+                    .first()
+                if existing_balloon is None:
+                    balloon = Balloon(
+                        participation_id=submission.participation_id,
+                        task_id=submission.task_id,
+                        submission_id=submission.id)
+                    session.add(balloon)
 
             # Store it.
             session.commit()

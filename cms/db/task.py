@@ -205,6 +205,12 @@ class Task(Base):
         nullable=False,
         default=0)
 
+    # Color of the balloon to distribute when this task is solved
+    # (only used when the active dataset uses ACMICPCApproximate scoring).
+    balloon_color = Column(
+        Unicode,
+        nullable=True)
+
     # Score mode for the task.
     score_mode = Column(
         Enum(SCORE_MODE_MAX_TOKENED_LAST,

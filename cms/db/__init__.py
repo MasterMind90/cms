@@ -68,6 +68,8 @@ __all__ = [
     "UserTestExecutable",
     # printjob
     "PrintJob",
+    # balloon
+    "Balloon",
     # init
     "init_db",
     # drop
@@ -104,6 +106,7 @@ from .submission import Submission, File, Token, SubmissionResult, \
 from .usertest import UserTest, UserTestFile, UserTestManager, \
     UserTestResult, UserTestExecutable
 from .printjob import PrintJob
+from .balloon import Balloon
 
 from .init import init_db
 from .drop import drop_db
