@@ -361,7 +361,8 @@ $(document).ready(function () {
       can_play_token,
       can_play_token_now,
       submissions_download_allowed,
-      false) }}
+      false,
+      contest) }}
 <h3>{% trans %}Official submissions{% endtrans %}</h3>
 {% endif %}
 
@@ -377,7 +378,8 @@ $(document).ready(function () {
     can_play_token,
     can_play_token_now,
     submissions_download_allowed,
-    true) }}
+    true,
+    contest) }}
 
 <div class="modal fade hide wide" id="submission_detail">
     <div class="modal-header">
