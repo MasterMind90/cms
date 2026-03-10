@@ -115,9 +115,9 @@ class ScoringExecutor(Executor):
                     .first()
                 if existing_balloon is None:
                     balloon = Balloon(
-                        participation_id=submission.participation_id,
-                        task_id=submission.task_id,
-                        submission_id=submission.id)
+                        participation=submission.participation,
+                        task=submission.task,
+                        submission=submission)
                     session.add(balloon)
 
             # Store it.
